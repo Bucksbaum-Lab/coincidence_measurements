@@ -26,8 +26,7 @@ All of this is nicely opperated via the 'main.m' file which is a GUI.
 
 function [output] = cutandplot(mass, charge, colms, momX, momY, momZ, partEnergy,...
     tof, hitNo, shotNo, numHits, numExtraHits, coneV, maxeV,...
-    conHeavyPartAngle, maxHeavyPartAngle, plTofPlot,...
-    plTofHist, plAngleHist, plEnergyPartHist, plEnergyHist, plMomDir,...
+    plTofPlot, plTofHist, plEnergyPartHist, plEnergyHist, plMomDir,...
     numCutPlotBins, deltat, deltax, deltay, conDeltat, incl)
 
 %-----------------------------------cuts----------------------------------%
@@ -294,83 +293,6 @@ cutTof(1) = [];
 %----------------------------------plots----------------------------------%
 
 uniqueShots = length(unique(shotNoOut(:, 1))) == length(shotNoOut(:, 1));
-
-%plot histograms of the angles
-if plAngleHist && numCutPlotBins > 0
-    switch numPart
-
-        case 2
-            figure()
-            hist(heavyAngle, numCutPlotBins);
-            xlabel('angle (radians)')
-            title(['num points ' num2str(numel(heavyAngle))])
-            
-        case 3
-            figure()
-            hist(angle(:, 1), numCutPlotBins)
-            xlabel(['angle between mass ' num2str(mass(3)) ' charge '...
-                num2str(charge(3)) ' and mass ' num2str(mass(1)) ' charge ' num2str(charge(1))])
-            title(['num points ' num2str(size(angle,1))])
-            
-            figure()
-            hist(angle(:, 2), numCutPlotBins)
-            xlabel(['angle between mass ' num2str(mass(3)) ' charge ' num2str(charge(3))...
-                ' and mass ' num2str(mass(2)) ' charge ' num2str(charge(2))])
-            title(['num points ' num2str(size(angle,1))])
-            
-            figure()
-            hist(angle(:, 3), numCutPlotBins)
-            xlabel(['angle between center of mass (' num2str(mass(2)) ' charge '...
-                num2str(charge(2)) ' - mass ' num2str(mass(3)) ' charge ' num2str(charge(3))...
-                ') and mass ' num2str(mass(1)) ' charge ' num2str(charge(1))])
-            title(['num points ' num2str(size(angle,1))])
-            
-        case 4
-            figure()
-            hist(angle(:, 1), numCutPlotBins)
-            xlabel(['angle between center of mass (' num2str(mass(3)) ' charge '...
-                num2str(charge(3)) ' - mass ' num2str(mass(3)) 'charge ' num2str(charge(4))...
-                ') and mass ' num2str(mass(1)) ' charge ' num2str(charge(1))])
-            title(['num points ' num2str(size(angle,1))])
-            
-            figure()
-            hist(angle(:, 2), numCutPlotBins)
-            xlabel(['angle between center of mass (' num2str(mass(3)) ' charge '...
-                num2str(charge(3)) ' - mass ' num2str(mass(3)) 'charge ' num2str(charge(4))...
-                ') and mass ' num2str(mass(2)) ' charge ' num2str(charge(2))])
-            title(['num points ' num2str(size(angle,1))])
-            
-            figure()
-            hist(angle(:, 3), numCutPlotBins)
-            xlabel(['angle between mass ' num2str(mass(1)) ' charge '...
-                num2str(charge(1)) ' and mass ' num2str(mass(2)) ' charge ' num2str(charge(2))])
-            title(['num points ' num2str(size(angle,1))])
-        
-            figure()
-            hist(angle(:, 4), numCutPlotBins)
-            xlabel(['angle between mass ' num2str(mass(1)) ' charge ' num2str(charge(1))...
-                ' and mass ' num2str(mass(3)) ' charge ' num2str(charge(3))])
-            title(['num points ' num2str(size(angle,1))])
-        
-            figure()
-            hist(angle(:, 5), numCutPlotBins)
-            xlabel(['angle between mass ' num2str(mass(1)) ' charge ' num2str(charge(1))...
-                ' and mass ' num2str(mass(4)) ' charge ' num2str(charge(4))])
-            title(['num points ' num2str(size(angle,1))])
-        
-            figure()
-            hist(angle(:, 6), numCutPlotBins)
-            xlabel(['angle between mass ' num2str(mass(2)) ' charge ' num2str(charge(2))...
-                ' and mass ' num2str(mass(3)) ' charge ' num2str(charge(3))])
-            title(['num points ' num2str(size(angle,1))])
-        
-            figure()
-            hist(angle(:, 7), numCutPlotBins)
-            xlabel(['angle between mass ' num2str(mass(2)) ' charge ' num2str(charge(2))...
-                ' and mass ' num2str(mass(4)) ' charge ' num2str(charge(4))])
-            title(['num points ' num2str(size(angle,1))])
-    end
-end
 
 %plot histograms of the tof for each particle
 if plTofHist && numCutPlotBins > 0

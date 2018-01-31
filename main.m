@@ -719,6 +719,7 @@ prepareParams = get(handles.prepareParams, 'data');
 prepTimeEstimate = get(handles.prepTimeEst, 'value');
 saveData = get(handles.savePrepare, 'value');
 includePrepared = get(handles.includePrepared, 'value');
+filenamePrepared = get(handles.filenamePrepared, 'string');
 
 %set length of ev array and theta array
 EVlength = 20;
@@ -755,6 +756,8 @@ end
 
 if includePrepared
 
+    load(filenamePrepared)
+    
     notincluded = [];
     notindex = 0;
     
@@ -977,18 +980,15 @@ pause(1)
 %get the necessary data from UI
 numExtraHits = get(handles.numExtraHits, 'string');
 coneV = get(handles.coneV, 'value');
-conHeavyPartAngle = get(handles.conHeavyPartAngle, 'value');
 conDeltat = get(handles.conDeltat, 'value');
 prepareParams = get(handles.prepareParams, 'data');
 cutAndPlotParams = get(handles.cutAndPlotParams, 'data');
-maxHeavyPartAngle = get(handles.maxHeavyPartAngle, 'string');
 deltat = get(handles.deltat, 'string');
 deltax = get(handles.deltax, 'string');
 deltay = get(handles.deltay, 'string');
 
 plTofPlot = get(handles.plTofPlot, 'value');
 plTofHist = get(handles.plTofHist, 'value');
-plAngleHist = get(handles.plAngleHist, 'value');
 plEnergyPartHist = get(handles.plEnergyPartHist, 'value');
 plEnergyHist = get(handles.plEnergyHist, 'value');
 plMomDir = get(handles.plMomDir, 'value');
@@ -1047,12 +1047,6 @@ if length(mass)+numExtraHits > 4
     error('you are trying to find a coincidence with more than 4 particles')
 end
 
-if isempty(maxHeavyPartAngle)
-    maxHeavyPartAngle = 0;
-else
-    maxHeavyPartAngle = str2double(maxHeavyPartAngle);
-end
-
 if isempty(deltat)
     deltat = 0;
 else
@@ -1080,18 +1074,10 @@ elseif (plMomDir && length(mass)<2)
     set(handles.err, 'string', 'at least two particles are required to plot mom sums');
     set(handles.cutAndPlot, 'string', 'cut and plot');
     error('at least two particles are required to plot mom sums')
-elseif (plAngleHist && length(mass)<2)
-    set(handles.err, 'string', 'at least two particles are required to plot an angle');
-    set(handles.cutAndPlot, 'string', 'cut and plot');
-    error('at least two particles are required to plot an angle')
 elseif (plTofPlot && length(mass)<2)
     set(handles.err, 'string', 'at least two particles are required to make TOF plot');
     set(handles.cutAndPlot, 'string', 'cut and plot');
     error('at least two particles are required to make TOF plot')
-elseif isnan(maxHeavyPartAngle)
-    set(handles.err, 'string', 'max heavy particle angle is not a number');
-    set(handles.cutAndPlot, 'string', 'cut and plot');
-    error('max heavy particle angle is not a number')
 elseif isnan(numCutPlotBins)
     set(handles.err, 'string', 'number of bins for histograms is not a number');
     set(handles.cutAndPlot, 'string', 'cut and plot');
@@ -1108,7 +1094,7 @@ elseif isnan(deltay)
     set(handles.err, 'string', 'deltay is not a number');
     set(handles.cutAndPlot, 'string', 'cut and plot');
     error('deltay is not a number')
-elseif numCutPlotBins == 0 && (plTofHist || plAngleHist || plEnergyPartHist || plEnergyHist)
+elseif numCutPlotBins == 0 && (plTofHist || plEnergyPartHist || plEnergyHist)
     set(handles.err, 'string', 'number of bins for histograms is not set or zero');
     set(handles.cutAndPlot, 'string', 'cut and plot');
     error('number of bins for histograms is not set or zero')
@@ -1116,10 +1102,6 @@ elseif sum(incl) < 1
     set(handles.err, 'string', 'no particles are included in the coincidence');
     set(handles.cutAndPlot, 'string', 'cut and plot');
     error('no particles are included in the coincidence')
-elseif (conHeavyPartAngle && length(mass)<2)
-    set(handles.err, 'string', 'at least two particles are required to constraint an angle');
-    set(handles.cutAndPlot, 'string', 'cut and plot');
-    error('at least two particles are required to constrain an angle')
 elseif (conDeltat && length(mass)<2)
     set(handles.err, 'string', 'at least two particles are required for momentum sums');
     set(handles.cutAndPlot, 'string', 'cut and plot');
@@ -1248,17 +1230,21 @@ for XX = 1:Textras
     [output] = cutandplot(mass, charge, colms, handles.momX(cond, :), handles.momY(cond, :),...
         handles.momZ(cond, :), handles.EV(cond, :), handles.ions_tof_processed(cond),...
         handles.hitNo(cond), handles.shotNo(cond), handles.numHits_processed(cond),...
-        numExtraHits, coneV, maxeV, conHeavyPartAngle, maxHeavyPartAngle, plTofPlot, plTofHist,...
-        plAngleHist, plEnergyPartHist, plEnergyHist, plMomDir, numCutPlotBins,...
-        deltat, deltax, deltay, conDeltat, incl);
+        numExtraHits, coneV, maxeV, plTofPlot, plTofHist, plEnergyPartHist, plEnergyHist,...
+        plMomDir, numCutPlotBins, deltat, deltax, deltay, conDeltat, incl);
 
     if saveData
         %build the output file
+        
+        if ~exist([handles.path '\analysis'], 'dir')
+        mkdir([handles.path '\analysis']);
+        pause(1)
+        end
 
         timee = clock;
-        filename = [handles.datafile, '-', date, '-', num2str(timee(4)), '-',...
+        filename = [handles.datafile, '-cut-', date, '-', num2str(timee(4)), '-',...
             num2str(timee(5)), '-', num2str(floor(timee(6))), '.mat'];
-        filename = fullfile(handles.path, filename);
+        filename = fullfile([handles.path '\analysis\'], filename);
 
         save(filename, 'output');
     end
