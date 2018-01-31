@@ -37,7 +37,7 @@ V1 <---> G <--------------> G <-----> VM
 
 % Edit the above text to modify the response to help main
 
-% Last Modified by GUIDE v2.5 25-Jan-2018 19:38:06
+% Last Modified by GUIDE v2.5 31-Jan-2018 11:49:44
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -82,87 +82,129 @@ function loadfile_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
+loadSave = get(handles.loadSave, 'value');
+
 %set the error bar to no errors
 set(handles.err, 'string', 'no errors');
 
 %check that the file exist
-filename = strtrim(get(handles.filename, 'string'));
 
-if ~(exist(filename, 'file'))
-    set(handles.err, 'string', 'file does not exist');
-    error('file does not exist')
+[file, handles.path] = uigetfile({'*.txt;*.mat'});
+
+set(handles.loadfile, 'string', 'loading');
+drawnow
+
+filename = [handles.path file];
+
+[~, handles.datafile, ext] = fileparts(filename);
+
+if strcmp(ext, '.txt')
+
+    %estimate how long it will take to load file
+    estimatedTime = 0;
+
+    for ii = 1:10
+        tic
+        testLoad = load([cd '\10000points.txt']);
+        estimatedTime = estimatedTime+toc;
+    end
+
+    fileInfo = dir(filename);
+    fileInfoTest = dir([cd '\10000points.txt']);
+    estimatedTime = estimatedTime/fileInfoTest.bytes/10*fileInfo.bytes;
+    fclose('all');
+    clear testLoad;
+
+    set(handles.err, 'string', ['estimated completed load time: ' datestr(datetime('now')+seconds(estimatedTime))]);
+    drawnow
+
+    %load the file and the other info required
+    rawdata = load(filename);
+
+    closedshutter = load([handles.path '\shutterclosed.txt']);
+    overlapstatus = load([handles.path '\overlapstatus.txt']);
+    overlapstatus2 = load([handles.path '\overlapstatus2.txt']);
+    eventtags = load([handles.path '\eventtags.txt']);
+
+    %initialize the arrays for holding ion info
+    [numshots,maxions] = size(rawdata);
+    eventtags = [eventtags; numshots];
+    maxions = (maxions-2)/3;
+
+    ions_x = zeros(numshots, maxions);
+    ions_y = zeros(numshots, maxions);
+    ions_tof = zeros(numshots, maxions);
+    shutterRaw = [];
+    overlapfullintensityRaw = [];
+    overlaplowintensityRaw = [];
+
+    %save the info into respective arrays
+    handles.numHitsRaw = rawdata(:, 2);
+    handles.HitNoRaw = rawdata(:, 1);
+
+    for nn = 1:maxions
+        ions_x(:, nn) = rawdata(:, 3*nn);
+        ions_y(:, nn) = rawdata(:, 3*nn+1);
+        ions_tof(:, nn) = rawdata(:, 3*nn+2);
+    end
+
+    handles.ions_x = ions_x;
+    handles.ions_y = ions_y;
+    handles.ions_tof = ions_tof;
+
+    for nn = 1:length(eventtags)-1
+        shutterRaw = [shutterRaw; repmat(closedshutter(nn), (eventtags(nn+1)-eventtags(nn)), 1)];
+        overlapfullintensityRaw = [overlapfullintensityRaw; repmat(overlapstatus(nn), (eventtags(nn+1)-eventtags(nn)), 1)];
+        overlaplowintensityRaw = [overlaplowintensityRaw; repmat(overlapstatus2(nn), (eventtags(nn+1)-eventtags(nn)), 1)];
+    end
+
+    handles.closedshutterRaw = shutterRaw;
+    handles.overlapfullintensityRaw = overlapfullintensityRaw;
+    handles.overlaplowintensityRaw = overlaplowintensityRaw;
+    
+elseif strcmp(ext, '.mat')
+    
+    load(filename)
+    
+    handles.datafile = loaded_data.datafile;
+    handles.path = loaded_data.path;
+    handles.numHitsRaw = loaded_data.numHitsRaw;
+    handles.HitNoRaw = loaded_data.HitNoRaw;
+    handles.ions_x = loaded_data.ions_x;
+    handles.ions_y = loaded_data.ions_y;
+    handles.ions_tof = loaded_data.ions_tof;
+    handles.closedshutterRaw = loaded_data.closedshutterRaw;
+    handles.overlapfullintensityRaw = loaded_data.overlapfullintensityRaw;
+    handles.overlaplowintensityRaw = loaded_data.overlaplowintensityRaw;
+    
 else
-    set(handles.loadfile, 'string', 'loading');
+    
+    set(handles.err, 'string', 'you did not select a .mat or .txt file');
+    error('you did not select a .mat or .txt file')
+    
 end
 
-drawnow
+if loadSave
+    loaded_data = struct('datafile', handles.datafile, 'path', handles.path,...
+        'numHitsRaw', handles.numHitsRaw, 'HitNoRaw', handles.HitNoRaw, 'ions_x', handles.ions_x,...
+        'ions_y', handles.ions_y, 'ions_tof', handles.ions_tof, 'closedshutterRaw', handles.closedshutterRaw,...
+        'overlapfullintensityRaw', handles.overlapfullintensityRaw, 'overlaplowintensityRaw',...
+        handles.overlaplowintensityRaw);
 
-[handles.path, handles.datafile, ~] = fileparts(filename);
+    if ~exist([handles.path '\analysis'], 'dir')
+        mkdir([handles.path '\analysis']);
+        pause(1)
+    end
+    
+    timee = clock;
+    filename = [handles.datafile, '-loaded_data-', date, '-', num2str(timee(4)), '-',...
+        num2str(timee(5)), '-', num2str(floor(timee(6))), '.mat'];
+    filename = fullfile([handles.path '\analysis\'], filename);
+    
+    save(filename, 'loaded_data', '-v7.3');
 
-%check to see if a calibration file exists already
-
-
-%estimate how long it will take to load file
-estimatedTime = 0;
-
-for ii = 1:10
-    tic
-    testLoad = load([cd '\10000points.txt']);
-    estimatedTime = estimatedTime+toc;
 end
-
-fileInfo = dir(filename);
-fileInfoTest = dir([cd '\10000points.txt']);
-estimatedTime = estimatedTime/fileInfoTest.bytes/10*fileInfo.bytes;
-fclose('all');
-clear testLoad;
-
-set(handles.err, 'string', ['estimated completed load time: ' datestr(datetime('now')+seconds(estimatedTime))]);
-drawnow
-
-%load the file and the other info required
-rawdata = load(filename);
-
-closedshutter = load([handles.path '\shutterclosed.txt']);
-overlapstatus = load([handles.path '\overlapstatus.txt']);
-overlapstatus2 = load([handles.path '\overlapstatus2.txt']);
-eventtags = load([handles.path '\eventtags.txt']);
-
-%initialize the arrays for holding ion info
-[numshots,maxions] = size(rawdata);
-eventtags = [eventtags; numshots];
-maxions = (maxions-2)/3;
-
-ions_x = zeros(numshots, maxions);
-ions_y = zeros(numshots, maxions);
-ions_tof = zeros(numshots, maxions);
-shutterRaw = [];
-overlapfullintensityRaw = [];
-overlaplowintensityRaw = [];
-
-%save the info into respective arrays
-handles.numHitsRaw = rawdata(:, 2);
-handles.HitNoRaw = rawdata(:, 1);
-
-for nn = 1:maxions
-    ions_x(:, nn) = rawdata(:, 3*nn);
-    ions_y(:, nn) = rawdata(:, 3*nn+1);
-    ions_tof(:, nn) = rawdata(:, 3*nn+2);
-end
-
-handles.ions_x = ions_x;
-handles.ions_y = ions_y;
-handles.ions_tof = ions_tof;
-
-for nn = 1:length(eventtags)-1
-    shutterRaw = [shutterRaw; repmat(closedshutter(nn), (eventtags(nn+1)-eventtags(nn)), 1)];
-    overlapfullintensityRaw = [overlapfullintensityRaw; repmat(overlapstatus(nn), (eventtags(nn+1)-eventtags(nn)), 1)];
-    overlaplowintensityRaw = [overlaplowintensityRaw; repmat(overlapstatus2(nn), (eventtags(nn+1)-eventtags(nn)), 1)];
-end
-
-handles.closedshutterRaw = shutterRaw;
-handles.overlapfullintensityRaw = overlapfullintensityRaw;
-handles.overlaplowintensityRaw = overlaplowintensityRaw;
+    
 
 %save any values saved to handles
 guidata(hObject, handles);
@@ -427,9 +469,12 @@ if saveCalib
     end
     
     timee = clock;
-    analysisname = [handles.path, '\analysis\points_of_interest-', date,...
-        '-', num2str(timee(4)), '-', num2str(timee(5)), '-', num2str(floor(timee(6))), '.mat'];
-    save(analysisname, 'points_of_interest');
+    filename = [handles.datafile, '-points_of_interest-', date, '-', num2str(timee(4)), '-',...
+        num2str(timee(5)), '-', num2str(floor(timee(6))), '.mat'];
+    filename = fullfile([handles.path '\analysis\'], filename);
+    
+    save(filename, 'points_of_interest', '-v7.3');
+
 end
 
 %reset the button string
@@ -687,9 +732,12 @@ if saveCalib
     end
     
     timee = clock;
-    analysisname = [handles.path '\analysis\calibration-' date, '-', num2str(timee(4)), '-',...
+    filename = [handles.datafile, '-calibration-', date, '-', num2str(timee(4)), '-',...
         num2str(timee(5)), '-', num2str(floor(timee(6))), '.mat'];
-    save(analysisname, 'calib');
+    filename = fullfile([handles.path '\analysis\'], filename);
+    
+    save(filename, 'calib');
+
 end
 
 %reset the button string
@@ -720,6 +768,7 @@ prepTimeEstimate = get(handles.prepTimeEst, 'value');
 saveData = get(handles.savePrepare, 'value');
 includePrepared = get(handles.includePrepared, 'value');
 filenamePrepared = get(handles.filenamePrepared, 'string');
+loadCalib = get(handles.loadCalib, 'value');
 
 %set length of ev array and theta array
 EVlength = 20;
@@ -752,6 +801,26 @@ elseif isempty(charge)
     set(handles.err, 'string', 'charge are empty');
     set(handles.prepare, 'string', 'prepare');
     error('charge are empty')
+end
+
+if loadCalib
+
+    set(handles.err, 'string', 'please select your calibration file');
+    
+    [calibFile, calibPath] = uigetfile(handles.path);
+    
+    load([calibPath, calibFile])
+    
+    x0 = calib.x0;
+    y0 = calib.y0;
+    t0 = calib.t0;
+    V1 = calib.V1;
+    VM = calib.VM;
+    ss = calib.s;
+    
+    set(handles.commonParams, 'data', [x0, y0, t0, V1, VM, ss]);
+    drawnow
+    
 end
 
 if includePrepared
@@ -800,15 +869,9 @@ if includePrepared
         end
     
         %take care of default values
-        if x0 == 1
-            x0 = mean(handles.ions_x(handles.ions_tof > calibTofMin(1) & handles.ions_tof < calibTofMax(1)));
-        end
-        if y0 == 1
-            y0 = mean(handles.ions_y(handles.ions_tof > calibTofMin(1) & handles.ions_tof < calibTofMax(1)));
-        end
-        if t0 == 1
-            t0 = min(min(handles.ions_tof));
-        end
+        if x0 == 1, x0 = 0; end
+        if y0 == 1, y0 = 0; end
+        if t0 == 1, t0 = 0; end
         if V1 == 1, V1 = 2000; end
         if VM == 1, VM = -2250; end
         if ss == 1, ss = 40.5; end
@@ -1808,3 +1871,12 @@ function loadSave_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 % Hint: get(hObject,'Value') returns toggle state of loadSave
+
+
+% --- Executes on button press in loadCalib.
+function loadCalib_Callback(hObject, eventdata, handles)
+% hObject    handle to loadCalib (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of loadCalib
