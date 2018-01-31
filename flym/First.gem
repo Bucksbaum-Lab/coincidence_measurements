@@ -1,0 +1,7 @@
+; First.gem
+fill {
+	within {
+		box3d(0,-51.0,-51.0, 1.0,51.0,51.0)
+	}
+}
+; end of First.gem

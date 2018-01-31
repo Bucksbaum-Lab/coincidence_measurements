@@ -1,0 +1,11 @@
+; FlightTube.gem
+fill {
+	locate(0,0,0,1.0,-90,0,0) {
+		within {
+			cylinder(0,0,0,102.0,102.0,566.0)
+		}
+		notin {
+			cylinder(0,0,0,98.0,98.0,566.0)		}
+	}
+}
+; end of FlightTube.gem

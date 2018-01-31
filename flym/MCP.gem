@@ -1,0 +1,9 @@
+; MCP.gem
+fill {
+	within {
+		locate(0,0,0,1.0,-90,0,0) { 
+			cylinder(0,0,0,75.0,75.0, 1.0)
+		} 
+	}
+}
+; end of MCP.gem
