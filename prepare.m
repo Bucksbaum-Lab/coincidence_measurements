@@ -52,10 +52,6 @@ tof = tof(:);
 rX = rX(:);
 rY = rY(:);
 
-'prepare line 55'
-size(shutter)
-size(tof)
-
 %eliminte nonsense events
 
 cond = hitNo <= numHits;

@@ -112,7 +112,6 @@ if strcmp(ext, '.txt')
     fileInfo = dir(filename);
     fileInfoTest = dir([cd '\10000points.txt']);
     estimatedTime = estimatedTime/fileInfoTest.bytes/10*fileInfo.bytes;
-    fclose('all');
     clear testLoad;
 
     set(handles.err, 'string', ['estimated completed load time: ' datestr(datetime('now')+seconds(estimatedTime))]);
@@ -176,6 +175,8 @@ elseif strcmp(ext, '.mat')
     handles.closedshutterRaw = loaded_data.closedshutterRaw;
     handles.overlapfullintensityRaw = loaded_data.overlapfullintensityRaw;
     handles.overlaplowintensityRaw = loaded_data.overlaplowintensityRaw;
+    
+    clear loaded_data
     
 else
     
@@ -767,7 +768,6 @@ prepareParams = get(handles.prepareParams, 'data');
 prepTimeEstimate = get(handles.prepTimeEst, 'value');
 saveData = get(handles.savePrepare, 'value');
 includePrepared = get(handles.includePrepared, 'value');
-filenamePrepared = get(handles.filenamePrepared, 'string');
 loadCalib = get(handles.loadCalib, 'value');
 
 %set length of ev array and theta array
@@ -825,7 +825,17 @@ end
 
 if includePrepared
 
-    load(filenamePrepared)
+    set(handles.err, 'string', 'please select your prepared file');
+    
+    if exist('handles.path', 'var')
+        
+        [calibFile, calibPath] = uigetfile(handles.path);
+    else
+        
+        [calibFile, calibPath] = uigetfile();
+    end
+    
+    load([calibPath, calibFile])
     
     notincluded = [];
     notindex = 0;
@@ -895,13 +905,13 @@ if includePrepared
                 tic
                 evalc('Sim = Flym_Sim(1, 12, 0, 0, 0, ss, V1, VM);');
                 estimatedTime = estimatedTime-toc;
+                tic
+                convertToEnergy(1000, 1, 1, V1, VM, ss, 1, 12, 10, EVlength, Thetalength);
+                estimatedTime = estimatedTime + toc;
             end
 
             estimatedTime = estimatedTime/100*EVlength*Thetalength*length(notincluded(:, 1));
-            fclose('all');
-            clear testLoad;
-
-            set(handles.err, 'string', ['estimated completed simulate time: ' datestr(datetime('now')+seconds(estimatedTime))]);
+            set(handles.err, 'string', ['estimated completed prepare time: ' datestr(datetime('now')+seconds(estimatedTime))]);
             drawnow
         end
         
@@ -930,15 +940,9 @@ else
     end
 
     %take care of default values
-    if x0 == 1
-        x0 = mean(handles.ions_x(handles.ions_tof > calibTofMin(1) & handles.ions_tof < calibTofMax(1)));
-    end
-    if y0 == 1
-        y0 = mean(handles.ions_y(handles.ions_tof > calibTofMin(1) & handles.ions_tof < calibTofMax(1)));
-    end
-    if t0 == 1
-        t0 = min(min(handles.ions_tof));
-    end
+    if x0 == 1, x0 = 0; end
+    if y0 == 1, y0 = 0; end
+    if t0 == 1, t0 = 0; end
     if V1 == 1, V1 = 2000; end
     if VM == 1, VM = -2250; end
     if ss == 1, ss = 40.5; end
@@ -953,23 +957,12 @@ else
     if prepTimeEstimate
 
         %estimate how long it will take to load file
+        %VASILY this region is for you
+        
         estimatedTime = 0;
-
-        for ii = 1:10
-            tic
-            evalc('Sim = Flym_Sim(1, [12,12,12,12,12,12,12,12,12,12,12], 0, 0, 0, ss, V1, VM);');
-            estimatedTime = estimatedTime+toc;
-            tic
-            evalc('Sim = Flym_Sim(1, 12, 0, 0, 0, ss, V1, VM);');
-            estimatedTime = estimatedTime-toc;
-        end
-
-        estimatedTime = estimatedTime/100*EVlength*Thetalength*length(mass);
-        fclose('all');
-        clear testLoad;
-
-        set(handles.err, 'string', ['estimated completed simulate time: ' datestr(datetime('now')+seconds(estimatedTime))]);
+        set(handles.err, 'string', ['estimated completed prepare time: ' datestr(datetime('now')+seconds(estimatedTime))]);
         drawnow
+        
     end
     %call the prepare function that will generate the momentum matrix that is
     %requried
