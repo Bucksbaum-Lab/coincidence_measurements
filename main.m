@@ -85,11 +85,13 @@ function loadfile_Callback(hObject, eventdata, handles)
 loadSave = get(handles.loadSave, 'value');
 
 %set the error bar to no errors
-set(handles.err, 'string', 'no errors');
+set(handles.err, 'string', 'please select a file, raw or pre-loaded');
 
 %check that the file exist
 
 [file, handles.path] = uigetfile({'*.txt;*.mat'});
+
+set(handles.err, 'string', 'no errors');
 
 set(handles.loadfile, 'string', 'loading');
 drawnow
@@ -296,7 +298,6 @@ rY = handles.ions_y;
 closedshutter = handles.closedshutterRaw;
 full = handles.overlapfullintensityRaw;
 low = handles.overlaplowintensityRaw;
-
 
 %get the necessary data from UI vectors
 x0 = t0(1);
@@ -807,7 +808,13 @@ if loadCalib
 
     set(handles.err, 'string', 'please select your calibration file');
     
-    [calibFile, calibPath] = uigetfile(handles.path);
+    if exist('handles', 'var') && isfield(handles, 'path')
+        [calibFile, calibPath] = uigetfile(handles.path);
+    else
+        [calibFile, calibPath] = uigetfile();
+    end
+    
+    set(handles.err, 'string', 'no errors');
     
     load([calibPath, calibFile])
     
@@ -827,18 +834,19 @@ if includePrepared
 
     set(handles.err, 'string', 'please select your prepared file');
     
-    if exist('handles.path', 'var')
-        
+    if exist('handles', 'var') && isfield(handles, 'path')
         [calibFile, calibPath] = uigetfile(handles.path);
     else
-        
         [calibFile, calibPath] = uigetfile();
     end
+    
+    set(handles.err, 'string', 'no errors');
     
     load([calibPath, calibFile])
     
     notincluded = [];
     notindex = 0;
+    preparedIndex = [];
     
     for ii = 1:length(mass)
 
@@ -898,21 +906,8 @@ if includePrepared
             %estimate how long it will take to load file
             estimatedTime = 0;
 
-            for ii = 1:10
-                tic
-                evalc('Sim = Flym_Sim(1, [12,12,12,12,12,12,12,12,12,12,12], 0, 0, 0, ss, V1, VM);');
-                estimatedTime = estimatedTime+toc;
-                tic
-                evalc('Sim = Flym_Sim(1, 12, 0, 0, 0, ss, V1, VM);');
-                estimatedTime = estimatedTime-toc;
-                tic
-                convertToEnergy(1000, 1, 1, V1, VM, ss, 1, 12, 10, EVlength, Thetalength);
-                estimatedTime = estimatedTime + toc;
-            end
-
-            estimatedTime = estimatedTime/100*EVlength*Thetalength*length(notincluded(:, 1));
-            set(handles.err, 'string', ['estimated completed prepare time: ' datestr(datetime('now')+seconds(estimatedTime))]);
-            drawnow
+            %For Vasily
+            
         end
         
         [handles.EV, handles.momZ, handles.momX, handles.momY, handles.hitNo, handles.shotNo,...
@@ -926,6 +921,14 @@ if includePrepared
         handles.momZ = [handles.momZ, prepared.momZ(:, preparedIndex)];
         handles.momX = [handles.momX, prepared.momX(:, preparedIndex)];
         handles.momY = [handles.momY, prepared.momY(:, preparedIndex)];
+        
+        mass = [notincluded(:, 1), prepared.mass(preparedIndex)];
+        charge = [notincluded(:, 2), prepared.charge(preparedIndex)];
+        maxEV = [notincluded(:, 3), prepared.maxEV(preparedIndex)];
+
+        prepareParams = zeros(size(handles.prepareParams));
+        prepareParams([1,2,3], linspace(1,length(mass),length(mass))) = [mass;charge;maxEV]
+        set(handles.prepareParams, 'data', prepareParams)
         
     end
     
@@ -1013,8 +1016,6 @@ end
 
 %reset the button string
 set(handles.prepare, 'string', 'prepare');
-
-datetime('now')
 
 %save any values saved to handles
 guidata(hObject, handles);
