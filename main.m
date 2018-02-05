@@ -378,17 +378,18 @@ title(['number of hits ' num2str(numel(tof))])
 if (t0 ~= 1)&&~(isnan(t0))
     tof = tof-t0;
     [values, bins] = hist(tof, tofNumBins);
-    
-    figure()
-    plot(bins, values)
-    hold on
 else
     [values, bins] = hist(tof, tofNumBins);
-    
-    figure()
-    plot(bins, values)
-    hold on
 end
+    
+figure()
+plot(bins, log(values))
+xlabel('tof (ns)')
+title(['log scale, number of hits' num2str(numel(tof))])
+
+figure()
+plot(bins, values)
+hold on
 xlabel('tof (ns)')
 title(['number of hits ' num2str(numel(tof))])
 
