@@ -1,4 +1,4 @@
-function Build_Fly(charge, mass, energy, theta, phi, posTOF)
+function Build_Fly(charge, mass, energy, theta, phi, posTOF, fly_spectromete_filename)
     %Make fly2 file for determing tk for given k and n for different
         %transverse momentum
 
@@ -75,7 +75,7 @@ fly = horzcat(fly,...
 
 fly = strcat(fly, '\t}\n}');
 
-fileID = fopen('flym\fly_Spectrometer.fly2','w+');
+fileID = fopen(fly_spectromete_filename,'w+');
 
 fprintf(fileID, fly);
 

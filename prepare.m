@@ -82,7 +82,7 @@ mom_y = zeros(length(rX), length(mass));
 
 %find the momentum associated with each event assuming it has a given mass
 %determined by which column it is in
-for ii = 1:length(mass)
+parfor ii = 1:length(mass)
 [EV(:, ii), mom_tof(:, ii), mom_x(:, ii), mom_y(:, ii)] =...
         convertToEnergy(tof, rX, rY, V1, VM, ss, charge(ii), mass(ii), maxEV(ii), EVlength, Thetalength);
 end
