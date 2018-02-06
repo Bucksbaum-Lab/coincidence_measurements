@@ -15,14 +15,17 @@ rR = sqrt(rX.^2+rY.^2);
 
 [thetaArray, eVArray] = meshgrid(thetaArray, eVArray);
 
-EV = griddata(tof_Sim, r_Sim, eVArray, tof, rR, 'v4');
-Theta = griddata(tof_Sim, r_Sim, thetaArray, tof, rR, 'v4')*pi()/180;
-
-%get rid of nonsense answers
 nonSense_tof_max = max(max(tof_Sim));
 nonSense_tof_min = min(min(tof_Sim));
-EV((tof > nonSense_tof_max)|(tof < nonSense_tof_min)) = NaN;
-Theta((tof > nonSense_tof_max)|(tof < nonSense_tof_min)) = NaN;
+isresonable_tof = (nonSense_tof_min <= tof)&(tof <= nonSense_tof_max);
+
+EV = nan(size(tof));
+Theta = nan(size(tof));
+
+EV(isresonable_tof)    = griddata(tof_Sim, r_Sim, eVArray,...
+                                  tof(isresonable_tof), rR(isresonable_tof), 'v4');
+Theta(isresonable_tof) = griddata(tof_Sim, r_Sim, thetaArray,...
+                                  tof(isresonable_tof), rR(isresonable_tof), 'v4')*pi()/180;
 
 %find the momentum vectors as well
 MomTotal = sqrt(2*mass*EV);
