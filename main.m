@@ -54,7 +54,12 @@ end
 if nargout
     [varargout{1:nargout}] = gui_mainfcn(gui_State, varargin{:});
 else
-    gui_mainfcn(gui_State, varargin{:});
+    try
+        gui_mainfcn(gui_State, varargin{:});
+    catch ME
+        errordlg(ME.message,'Error');
+        ME.rethrow
+    end
 end
 % End initialization code - DO NOT EDIT
 
