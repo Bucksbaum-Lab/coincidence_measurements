@@ -399,6 +399,12 @@ tof = tof(:);
 rX = rX(:);
 rY = rY(:);
 
+% Exclude entries that are not events (assuming no ion has tof exactly 0)
+rX = rX(tof ~= 0);
+rY = rY(tof ~= 0);
+tof = tof(tof ~= 0);
+
+
 %plot histograms of tof, x position, and y position
 if (x0 ~= 1)&&~(isnan(x0))
     rX = rX-x0;
