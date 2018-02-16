@@ -80,7 +80,16 @@ handles.output = hObject;
 guidata(hObject, handles);
 
 
+function file = loadIfExists(filename)
+    if(exist(filename, 'file') == 2)
+        file = load(filename);
+    else
+        warning([filename ' does not exist. Loaded "0".'])
+        warndlg([filename ' does not exist. Loaded "0".'])
+        file = 0;
+    end
 
+    
 % --- Executes on button press in loadfile.
 function loadfile_Callback(hObject, eventdata, handles)
 % hObject    handle to loadfile (see GCBO)
@@ -121,16 +130,17 @@ if strcmp(ext, '.txt')
     estimatedTime = estimatedTime/fileInfoTest.bytes/10*fileInfo.bytes;
     clear testLoad;
 
-    set(handles.err, 'string', ['estimated completed load time: ' datestr(datetime('now')+seconds(estimatedTime))]);
+    set(handles.err, 'string', ['estimated completed load time: '...
+        datestr(datetime('now')+seconds(estimatedTime))]);
     drawnow
 
     %load the file and the other info required
     rawdata = load(filename);
-
-    closedshutter = load([handles.path '\shutterclosed.txt']);
-    overlapstatus = load([handles.path '\overlapstatus.txt']);
-    overlapstatus2 = load([handles.path '\overlapstatus2.txt']);
-    eventtags = load([handles.path '\eventtags.txt']);
+  
+    closedshutter  = loadIfExists([handles.path '\shutterclosed.txt']);
+    overlapstatus  = loadIfExists([handles.path '\overlapstatus.txt']);
+    overlapstatus2 = loadIfExists([handles.path '\overlapstatus2.txt']);
+    eventtags      = loadIfExists([handles.path '\eventtags.txt']);
 
     %initialize the arrays for holding ion info
     [numshots,maxions] = size(rawdata);
