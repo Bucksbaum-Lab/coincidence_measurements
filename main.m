@@ -473,7 +473,7 @@ if prod(calibTofMin)*prod(calibTofMax) > 0
         fit_range = (calibTofMin(ii) < bins)&(bins < calibTofMax(ii));
         fit_result = fit(bins(fit_range).', values(fit_range).', 'gauss1');
         tof_peaks(ii) = fit_result.b1;
-        p = plot(fit_result);
+        p = plot(bins(fit_range), fit_result(bins(fit_range)));
         set(p, 'color', colorArray(ii, :))
     end
 
