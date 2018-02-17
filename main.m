@@ -80,13 +80,16 @@ handles.output = hObject;
 guidata(hObject, handles);
 
 
-function file = loadIfExists(filename)
+function file = loadIfExists(filename, length)
+    
+    if(~exist('length', 'var')) length = 2; end
+    
     if(exist(filename, 'file') == 2)
         file = load(filename);
     else
         warning([filename ' does not exist. Loaded "0".'])
         warndlg([filename ' does not exist. Loaded "0".'])
-        file = 0;
+        file = zeros(length, 1);
     end
 
     
@@ -138,9 +141,12 @@ if strcmp(ext, '.txt')
     rawdata = load(filename);
   
     closedshutter  = loadIfExists([handles.path '\shutterclosed.txt']);
-    overlapstatus  = loadIfExists([handles.path '\overlapstatus.txt']);
-    overlapstatus2 = loadIfExists([handles.path '\overlapstatus2.txt']);
-    eventtags      = loadIfExists([handles.path '\eventtags.txt']);
+    overlapstatus  = loadIfExists([handles.path '\overlapstatus.txt'], ...
+                                  size(closedshutter, 1));
+    overlapstatus2 = loadIfExists([handles.path '\overlapstatus2.txt'], ...
+                                  size(closedshutter, 1));
+    eventtags      = loadIfExists([handles.path '\eventtags.txt'], ...
+                                  size(closedshutter, 1));
 
     %initialize the arrays for holding ion info
     [numshots,maxions] = size(rawdata);
