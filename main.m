@@ -456,7 +456,7 @@ end
 figure()
 plot(bins, log(values))
 xlabel('tof (ns)')
-title(['log scale, number of hits' num2str(numel(tof))])
+title(['log scale, number of hits ' num2str(numel(tof))])
 
 figure()
 plot(bins, values)
@@ -613,6 +613,22 @@ end
 if y0 == 1
     y0 = mean(rY(tof > calibTofMin(1) & tof < calibTofMax(1)));
 end
+
+tofNumBins = str2double(get(handles.tofNumBins, 'string'));
+figure();
+hist(rX - x0, tofNumBins);
+hold on;
+hist(rX(tof > calibTofMin(1) & tof < calibTofMax(1)) - x0, tofNumBins);
+xlabel('x (mm)')
+title('Distribution of all and calibration species')
+
+
+figure();
+hist(rY - y0, tofNumBins);
+hold on;
+hist(rY(tof > calibTofMin(1) & tof < calibTofMax(1)) - y0, tofNumBins);
+xlabel('y (mm)')
+title('Distribution of all and calibration species')
 
 %check for some errors
 if V1 < 500 || VM > -500
@@ -896,7 +912,7 @@ if includePrepared
         handles.momY = prepared.momY(:, preparedIndex);
         handles.hitNo = prepared.hitNo;
         handles.shotNo = prepared.shotNo;
-        handles.numHis_processed = prepared.numHits_processed;
+        handles.numHits_processed = prepared.numHits_processed;
         handles.ions_tof_processed = prepared.ions_tof_processed;
         handles.ions_x_processed = prepared.ions_x_processed;
         handles.ions_y_processed = prepared.ions_y_processed;
