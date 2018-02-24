@@ -20,8 +20,6 @@ plots.
 
 All of this is nicely opperated via the 'main.m' file which is a GUI.
 
-%---------------------Last Edited on February 4, 2014---------------------%
-%------Last Edited by and Original Author - Chelsea Liekhus-Schmaltz------% 
 %}
 
 function [output] = cutandplot(mass, charge, colms, momX, momY, momZ, partEnergy,...
@@ -43,7 +41,6 @@ incl = incl(R);
 maxeV = maxeV(R);
 
 %initialize any necessary vectors and matrices
-cutTof = 0;
 stats = zeros(numPart+4, 1);
 stats(1) = length(tof);
 stats(2) = length(unique(shotNo));
@@ -55,112 +52,10 @@ end
 
 %first cut: require that the total number of hits equals the total number
 %of particles in the desired coincidence
-if numExtraHits == 0
-
-    %generate the condition
-    cond = numHits == numPart;
-    
-    %apply the cut
-    momX = momX(cond, :);
-    momY = momY(cond, :);
-    momZ = momZ(cond, :);
-    hitNo = hitNo(cond);
-    shotNo = shotNo(cond);
-    numHits = numHits(cond);
-    cutTof = [cutTof; tof(~cond)];
-    tof = tof(cond);
-    partEnergy = partEnergy(cond,:);
-
-    %initialize the momentum vectors
-    leng = sum(cond)/numPart;
-    momXOut = zeros(leng, numPart);
-    momYOut = zeros(leng, numPart);
-    momZOut = zeros(leng, numPart);
-    partEnergyOut = zeros(leng, numPart);
-    tofOut = zeros(leng, numPart);
-    hitNoOut = zeros(leng, numPart);
-    shotNoOut = zeros(leng, numPart);
-    numHitsOut = zeros(leng, numPart);
-
-    %associate each hit with a mass
-    for i = 1:numPart
-        momXOut(:, i) = momX(hitNo == i, colms(i));
-        momYOut(:, i) = momY(hitNo == i, colms(i));
-        momZOut(:, i) = momZ(hitNo == i, colms(i));
-        partEnergyOut(:, i) = partEnergy(hitNo == i, colms(i));
-        tofOut(:, i) = tof(hitNo == i);
-        hitNoOut(:, i) = hitNo(hitNo == i);
-        shotNoOut(:, i) = shotNo(hitNo == i);
-        numHitsOut(:, i) = numHits(hitNo == i);
-    end
-
-%if this cut is not applied then cycle through possible combinations that
-%result in the necessary number of hits
-else
-    switch numPart
-        %for one particle, the logic is straight forward, just take the
-        %momentum from the appropriate column from the momentum matrix
-        %generted in the preparation
-        case 1
-            cond = numHits <= numExtraHits+1;
-            momXOut = momX(cond, colms(1));
-            momYOut = momY(cond, colms(1));
-            momZOut = momZ(cond, colms(1));
-            partEnergyOut = partEnergy(cond, colms(1));
-            tofOut = tof(cond);
-            hitNoOut = hitNo(cond);
-            shotNoOut = shotNo(cond);
-            numHitsOut = numHits(cond);
-
-            condd = cond;
-            
-            clear cond
-            
-        %for the two particle case, generate ordered pairs of the hits and
-        %then associate these with the correct mass
-        case 2
-            expectLength = 0;
-            
-            momXOut = [];
-            momYOut = [];
-            momZOut = [];
-            partEnergyOut = [];
-            tofOut = [];
-            hitNoOut = [];
-            shotNoOut = [];
-            numHitsOut = [];
-            
-            for j = 2:numExtraHits+2
-                for i = 1:j-1
-
-                    cond2 = hitNo == j;
-                    cond1 = circshift(cond2, -i);
-
-                    momXOut = [momXOut;[momX(cond1, colms(1)), momX(cond2, colms(2))]];
-                    momYOut = [momYOut;[momY(cond1, colms(1)), momY(cond2, colms(2))]];
-                    momZOut = [momZOut;[momZ(cond1, colms(1)), momZ(cond2, colms(2))]];
-                    partEnergyOut = [partEnergyOut;[partEnergy(cond1, colms(1)), partEnergy(cond2, colms(2))]];
-                    tofOut = [tofOut;[tof(cond1), tof(cond2)]];
-                    hitNoOut = [hitNoOut;[hitNo(cond1), hitNo(cond2)]];
-                    shotNoOut = [shotNoOut;[shotNo(cond1), shotNo(cond2)]];
-                    numHitsOut = [numHitsOut;[numHits(cond1), numHits(cond2)]];
-
-                    %record all of the events that are categorized
-                    condd = cond1 | cond2;
-
-                end
-            end
-            
-            clear cond1
-            clear cond2    
-    end
-    
-    if isempty(condd)
-        condd = false(size(tof));
-    end
-    
-    cutTof = [cutTof; tof(~condd)];
-end
+[momXOut, momYOut, momZOut, partEnergyOut, tofOut,...
+    hitNoOut,shotNoOut, numHitsOut, cutTof] = ...
+    FirstCut(numPart, numExtraHits, colms, momX, momY, momZ, ...
+             partEnergy, tof, hitNo, shotNo, numHits);
 
 [~, R] = sort(incl, 'descend');
 
@@ -369,3 +264,67 @@ output = struct('hitNoOut', hitNoOut, 'shotNoOut', shotNoOut, 'numHitsOut',...
     'cutTof', cutTof, 'tofOut', tofOut, 'mass', mass, 'charge', charge,...
     'stats', stats, 'totalMomAll', totalMomAll, 'uniqueShots',...
     uniqueShots, 'partEnergyOut', partEnergyOut, 'KER', KER, 'incl', incl);
+
+
+
+function [momXOut, momYOut, momZOut, partEnergyOut, tofOut,...
+          hitNoOut,shotNoOut, numHitsOut, cutTof] = ...
+          FirstCut(numPart, numExtraHits, colms, momX, momY, momZ, ...
+                   partEnergy, tof, hitNo, shotNo, numHits)
+%first cut: require that the total number of hits equals the total number
+%of particles in the desired coincidence
+expectLength = 0;
+
+cutTof = 0;
+momXOut =[];
+momYOut = [];
+momZOut = [];
+partEnergyOut = [];
+tofOut = [];
+hitNoOut = [];
+shotNoOut = [];
+numHitsOut = [];
+condd = false(size(tof));
+        
+for j = numPart:(numExtraHits+numPart)
+
+    last_indeces = find((hitNo == j) & (numHits == j));
+    combs = nchoosek(1:j, numPart);
+
+    for i = 1:size(combs, 1)
+
+        momXOut_i = [];
+        momYOut_i = [];
+        momZOut_i = [];
+        partEnergy_i = [];
+        tofOut_i = [];
+        hitNoOut_i = [];
+        shotNoOut_i = [];
+        numHitsOut_i = [];
+
+        for k = 1:numPart
+
+            particle_indeces = last_indeces - combs(i, numPart - k + 1) + 1;
+            condd(particle_indeces) = true;
+            momXOut_i = [momXOut_i, momX(particle_indeces, colms(k))];
+            momYOut_i = [momYOut_i, momY(particle_indeces, colms(k))];
+            momZOut_i = [momZOut_i, momZ(particle_indeces, colms(k))];
+            partEnergy_i = [partEnergy_i, partEnergy(particle_indeces, colms(k))];
+            tofOut_i = [tofOut_i, tof(particle_indeces)];
+            hitNoOut_i = [hitNoOut_i, hitNo(particle_indeces)];
+            shotNoOut_i = [shotNoOut_i, shotNo(particle_indeces)];
+            numHitsOut_i = [numHitsOut_i, numHits(particle_indeces)];
+
+        end
+        momXOut = [momXOut; momXOut_i];
+        momYOut = [momYOut; momYOut_i];
+        momZOut = [momZOut; momZOut_i];
+        partEnergyOut = [partEnergyOut; partEnergy_i];
+        tofOut = [tofOut; tofOut_i];
+        hitNoOut = [hitNoOut; hitNoOut_i];
+        shotNoOut = [shotNoOut; shotNoOut_i];
+        numHitsOut = [numHitsOut; numHitsOut_i];
+    end
+end
+
+cutTof = [cutTof; tof(~condd)];
