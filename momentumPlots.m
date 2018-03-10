@@ -1,57 +1,51 @@
-clear all
+%clear all
 
+f = momentumPlotsFunctions();
 
-dpx = 3;
-filename= 'G:\\2018_02_09\\analysis\\Acetylene_266_800_1300_4p3e9torr_80fs_DAn_DAn-cut-23-Feb-2018-22-4-41_M=1,12,13_Z=1(10eV, dpx=3)_OPEN.mat';
+filename= ['G:\\2018_02_09\\analysis\\Acetylene_266_800_1300_4p3e9torr_80fs_DAn_DAn-cut-23-Feb-2018-22-4-41_M=1,12,13_Z=1(10eV, dpx=3)_' ...
+           'OPEN.mat'];
 load(filename);
 
-figure()
-subplot(1,3,1) 
-hist(sum(real(output.momXOut),2), 50)
-subplot(1,3,2)
-hist(sum(real(output.momYOut),2), 50)
-subplot(1,3,3)
-hist(sum(real(output.momZOut),2), 50)
-
-momX = output.momXOut;
-momY = output.momYOut;
-momZ = output.momZOut;
-
-mass = output.mass;
-
-p = 1;
-p_on = [2,3];
-
-KER = output.KER;
-    
-CMCX = (momX(:, p_on(1))+momX(:, p_on(2)))/sum(mass(p_on));
-CMCY = (momY(:, p_on(1))+momY(:, p_on(2)))/sum(mass(p_on));
-CMCZ = (momZ(:, p_on(1))+momZ(:, p_on(2)))/sum(mass(p_on));
+[parallel_proj, perpendicular_proj]  =... 
+    f.momProject(output.momXOut, output.momYOut, output.momZOut, output.mass, 1, [2, 3]);
 
 
-momX(:, p) = momX(:, p) - CMCX*mass(p);
-momX(:, p_on(1)) = momX(:, p_on(1)) - CMCX*mass(p_on(1));
-momX(:, p_on(2)) = momX(:, p_on(2)) - CMCX*mass(p_on(2));
-
-momY(:, p) = momY(:, p) - CMCX*mass(p);
-momY(:, p_on(1)) = momY(:, p_on(1)) - CMCX*mass(p_on(1));
-momY(:, p_on(2)) = momY(:, p_on(2)) - CMCX*mass(p_on(2));
-
-momZ(:, p) = momZ(:, p) - CMCX*mass(p);
-momZ(:, p_on(1)) = momZ(:, p_on(1)) - CMCX*mass(p_on(1));
-momZ(:, p_on(2)) = momZ(:, p_on(2)) - CMCX*mass(p_on(2));
-
-V = [(momX(:, p_on(2))-momX(:, p_on(1))), ...
-     (momY(:, p_on(2))-momY(:, p_on(1))), ...
-     (momZ(:, p_on(2))-momZ(:, p_on(1)))];
-V = V./apply_to_rows(@norm, V);
-
-parallel_proj  = dot(V, [momX(:, p), momY(:, p), momZ(:, p)], 2);
-perpendicular_proj = apply_to_rows(@norm, [momX(:, p), momY(:, p), momZ(:, p)] - V.*parallel_proj); 
 %%
-figure()
-[N,C] = hist3([(abs(real(parallel_proj))), real(perpendicular_proj)], [30, 30]);
-pcolor(C{1}, C{2}, N');
-title('shutter open')
+figure
+f.momHists(output)
+
+%%
+figure
+f.particleKERhist(1, output.partEnergyOut, output.mass, 35, 10)
+
+%%
+figure
+[Xp, Yp, N_OPEN] = ...
+    f.momentum2dDistPolar(parallel_proj, perpendicular_proj, [200, 0, 5], [12, 0, pi/2],...
+                              'control on', 'H^{+}', 'C^{+}', 'CH^{+}');
+%%
+figure
+f.momentum2dDistCartesian(parallel_proj, perpendicular_proj, 14, ...
+                          'control off', 'H^{+}', 'C^{+}', 'CH^{+}')
+%%
+figure
+plot((pi/48:pi/24:(pi/2-pi/48))*180/pi, sum(N_CLOSED(51:100, 1:12), 1) )
+hold on
+plot((pi/48:pi/24:(pi/2-pi/48))*180/pi, sum(N_OPEN((51:100), 1:12), 1))
+title('Integrated from |p| = 2.5 to |p| = 3.5')
+xlabel('Angle (degrees)')
+ylabel('counts')
+legend('control off','control on','Location','southeast')
+grid on
+
+%%
+pl = pcolor(Xp, Yp, (N_OPEN - N_CLOSED)));
+set(pl, 'EdgeColor', 'none');
+pl;
+axis equal tight
+colormap bluewhitered(100)
+title('on - off, relative')
 xlabel('$$ \vec{P}(H^{+})\parallel \left(\vec{P}(CH^{+}) - \vec{P}(C^{+})\right) $$', 'Interpreter','latex')
 ylabel('$$ \vec{P}(H^{+})\perp \left(\vec{P}(CH^{+}) - \vec{P}(C^{+})\right) $$', 'Interpreter','latex')
+
+%%
