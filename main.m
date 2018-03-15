@@ -136,18 +136,24 @@ if strcmp(ext, '.txt')
     set(handles.err, 'string', ['estimated completed load time: '...
         datestr(datetime('now')+seconds(estimatedTime))]);
     drawnow
-
+    
     %load the file and the other info required
-    rawdata = load(filename);
-  
-    closedshutter  = loadIfExists([handles.path '\shutterclosed.txt']);
-    overlapstatus  = loadIfExists([handles.path '\overlapstatus.txt'], ...
-                                  size(closedshutter, 1));
-    overlapstatus2 = loadIfExists([handles.path '\overlapstatus2.txt'], ...
-                                  size(closedshutter, 1));
-    eventtags      = loadIfExists([handles.path '\eventtags.txt'], ...
-                                  size(closedshutter, 1));
-
+    rawdata = sparse(load(filename));
+    eventtags      = loadIfExists([handles.path '\eventtags.txt']);
+    closedshutter  = (loadIfExists([handles.path '\shutterclosed.txt'], ...
+                                          size(eventtags, 1)));
+    overlapstatus  = (loadIfExists([handles.path '\overlapstatus.txt'], ...
+                                          size(eventtags, 1)));
+    overlapstatus2 = (loadIfExists([handles.path '\overlapstatus2.txt'], ...
+                                          size(eventtags, 1)));
+    if(max(eventtags) > size(rawdata, 1))
+       warning('eventtags has mor events than data, eventtags reduced')
+       eventtags = eventtags( eventtags <= size(rawdata, 1) );
+       closedshutter = closedshutter( eventtags <= size(rawdata, 1) );
+       overlapstatus = overlapstatus( eventtags <= size(rawdata, 1) );
+       overlapstatus2 = overlapstatus2( eventtags <= size(rawdata, 1) );
+    end
+        
     %initialize the arrays for holding ion info
     [numshots,maxions] = size(rawdata);
     eventtags = [eventtags; numshots];
@@ -155,14 +161,11 @@ if strcmp(ext, '.txt')
 
     ions_x = zeros(numshots, maxions);
     ions_y = zeros(numshots, maxions);
-    ions_tof = zeros(numshots, maxions);
-    shutterRaw = [];
-    overlapfullintensityRaw = [];
-    overlaplowintensityRaw = [];
+    ions_tof = sparse(numshots, maxions);
 
     %save the info into respective arrays
     handles.numHitsRaw = rawdata(:, 2);
-    handles.HitNoRaw = rawdata(:, 1);
+%    handles.HitNoRaw = rawdata(:, 1);
 
     for nn = 1:maxions
         ions_x(:, nn) = rawdata(:, 3*nn);
@@ -174,15 +177,24 @@ if strcmp(ext, '.txt')
     handles.ions_y = ions_y;
     handles.ions_tof = ions_tof;
 
-    for nn = 1:length(eventtags)-1
-        shutterRaw = [shutterRaw; repmat(closedshutter(nn), (eventtags(nn+1)-eventtags(nn)), 1)];
-        overlapfullintensityRaw = [overlapfullintensityRaw; repmat(overlapstatus(nn), (eventtags(nn+1)-eventtags(nn)), 1)];
-        overlaplowintensityRaw = [overlaplowintensityRaw; repmat(overlapstatus2(nn), (eventtags(nn+1)-eventtags(nn)), 1)];
+    toc
+    shutterRaw = nan(eventtags(length(eventtags)), 1);
+    overlapfullintensityRaw = nan(eventtags(length(eventtags)), 1);
+    overlaplowintensityRaw =nan(eventtags(length(eventtags)), 1);
+    
+    toc
+        for nn = 1:length(eventtags)-1
+        shutterRaw((eventtags(nn) + 1):eventtags(nn + 1)) = ...
+            repmat(closedshutter(nn), (eventtags(nn+1)-eventtags(nn)), 1);
+        overlapfullintensityRaw((eventtags(nn) + 1):eventtags(nn + 1)) = ...
+            repmat(overlapstatus(nn), (eventtags(nn+1)-eventtags(nn)), 1);
+        overlaplowintensityRaw((eventtags(nn) + 1):eventtags(nn + 1)) = ...
+            repmat(overlapstatus2(nn), (eventtags(nn+1)-eventtags(nn)), 1);
     end
 
-    handles.closedshutterRaw = shutterRaw;
-    handles.overlapfullintensityRaw = overlapfullintensityRaw;
-    handles.overlaplowintensityRaw = overlaplowintensityRaw;
+    handles.closedshutterRaw = sparse(shutterRaw);
+    handles.overlapfullintensityRaw = sparse(overlapfullintensityRaw);
+    handles.overlaplowintensityRaw = sparse(overlaplowintensityRaw);
     
 elseif strcmp(ext, '.mat')
     
@@ -191,7 +203,7 @@ elseif strcmp(ext, '.mat')
     handles.datafile = loaded_data.datafile;
     handles.path = loaded_data.path;
     handles.numHitsRaw = loaded_data.numHitsRaw;
-    handles.HitNoRaw = loaded_data.HitNoRaw;
+%    handles.HitNoRaw = loaded_data.HitNoRaw;
     handles.ions_x = loaded_data.ions_x;
     handles.ions_y = loaded_data.ions_y;
     handles.ions_tof = loaded_data.ions_tof;
@@ -210,7 +222,8 @@ end
 
 if loadSave
     loaded_data = struct('datafile', handles.datafile, 'path', handles.path,...
-        'numHitsRaw', handles.numHitsRaw, 'HitNoRaw', handles.HitNoRaw, 'ions_x', handles.ions_x,...
+        'numHitsRaw', handles.numHitsRaw, ... %  'HitNoRaw', handles.HitNoRaw,...
+        'ions_x', handles.ions_x,...
         'ions_y', handles.ions_y, 'ions_tof', handles.ions_tof, 'closedshutterRaw', handles.closedshutterRaw,...
         'overlapfullintensityRaw', handles.overlapfullintensityRaw, 'overlaplowintensityRaw',...
         handles.overlaplowintensityRaw);
@@ -347,17 +360,17 @@ end
 %set conditions for shutter and intensity settings
 
 [~, maxions] = size(tof);
-closedshutter = repmat(closedshutter, 1, maxions);
-closedshutter = (closedshutter)';
-closedshutter = closedshutter(:);
-
-full = repmat(full, 1, maxions);
-full = (full)';
-full = full(:);
-
-low = repmat(low, 1, maxions);
-low = (low)';
-low = low(:);
+% closedshutter = repmat(closedshutter, 1, maxions);
+% closedshutter = (closedshutter)';
+% closedshutter = closedshutter(:);
+% 
+% full = repmat(full, 1, maxions);
+% full = (full)';
+% full = full(:);
+% 
+% low = repmat(low, 1, maxions);
+% low = (low)';
+% low = low(:);
 
 cond = (tof(:, 1) > 50)&(tof(:, 2) > 50);
 if (shutter == 1 && intensity == 1)
@@ -452,11 +465,25 @@ if (t0 ~= 1)&&~(isnan(t0))
 else
     [values, bins] = hist(tof, tofNumBins);
 end
-    
-figure()
-plot(bins, log(values))
-xlabel('tof (ns)')
-title(['log scale, number of hits ' num2str(numel(tof))])
+
+% figure()
+% plot((bins - 71.62718).^2*(3.741E-6), values)
+% xlabel('M/Z')
+% title(['number of hits ' num2str(numel(tof))])
+
+% values_all = [];
+% figure()
+% valuestoplot = (handles.ions_tof - 71.62718).^2*(3.741E-6);
+% bins_mass = -2:0.25:45;
+% n = 10;
+% for i = 1:n
+%     current_values = valuestoplot(round(size(valuestoplot, 1)*(i-1)/n + 1):round(size(valuestoplot, 1)*i/n),:);
+%     [values, bins_mass] =  hist(current_values(:), bins_mass);
+%     plot(bins_mass, values , 'color', [(i-1)/(n-1), 0, (n-i)/(n-1)] );
+%     hold on;
+%     values_all = [values_all, values'];
+% end
+% hold off
 
 figure()
 plot(bins, values)
