@@ -37,7 +37,7 @@ V1 <---> G <--------------> G <-----> VM
 
 % Edit the above text to modify the response to help main
 
-% Last Modified by GUIDE v2.5 31-Jan-2018 11:49:44
+% Last Modified by GUIDE v2.5 12-Apr-2018 17:20:02
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -100,6 +100,9 @@ function loadfile_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 loadSave = get(handles.loadSave, 'value');
+breakUpData = get(handles.breakUpData, 'value');
+numChunks = get(handles.numEventTags, 'string');
+numChunks = str2num(numChunks);
 
 %set the error bar to no errors
 set(handles.err, 'string', 'please select a file, raw or pre-loaded');
@@ -118,7 +121,7 @@ filename = [handles.path file];
 [~, handles.datafile, ext] = fileparts(filename);
 
 if strcmp(ext, '.txt')
-
+    
     %estimate how long it will take to load file
     estimatedTime = 0;
 
@@ -138,63 +141,131 @@ if strcmp(ext, '.txt')
     drawnow
     
     %load the file and the other info required
-    rawdata = sparse(load(filename));
-    eventtags      = loadIfExists([handles.path '\eventtags.txt']);
-    closedshutter  = (loadIfExists([handles.path '\shutterclosed.txt'], ...
-                                          size(eventtags, 1)));
-    overlapstatus  = (loadIfExists([handles.path '\overlapstatus.txt'], ...
-                                          size(eventtags, 1)));
-    overlapstatus2 = (loadIfExists([handles.path '\overlapstatus2.txt'], ...
-                                          size(eventtags, 1)));
-    if(max(eventtags) > size(rawdata, 1))
-       warning('eventtags has mor events than data, eventtags reduced')
-       eventtags = eventtags( eventtags <= size(rawdata, 1) );
-       closedshutter = closedshutter( eventtags <= size(rawdata, 1) );
-       overlapstatus = overlapstatus( eventtags <= size(rawdata, 1) );
-       overlapstatus2 = overlapstatus2( eventtags <= size(rawdata, 1) );
-    end
-        
-    %initialize the arrays for holding ion info
-    [numshots,maxions] = size(rawdata);
-    eventtags = [eventtags; numshots];
-    maxions = (maxions-2)/3;
-
-    ions_x = zeros(numshots, maxions);
-    ions_y = zeros(numshots, maxions);
-    ions_tof = sparse(numshots, maxions);
-
-    %save the info into respective arrays
-    handles.numHitsRaw = rawdata(:, 2);
-%    handles.HitNoRaw = rawdata(:, 1);
-
-    for nn = 1:maxions
-        ions_x(:, nn) = rawdata(:, 3*nn);
-        ions_y(:, nn) = rawdata(:, 3*nn+1);
-        ions_tof(:, nn) = rawdata(:, 3*nn+2);
-    end
-
-    handles.ions_x = ions_x;
-    handles.ions_y = ions_y;
-    handles.ions_tof = ions_tof;
-
-    toc
-    shutterRaw = nan(eventtags(length(eventtags)), 1);
-    overlapfullintensityRaw = nan(eventtags(length(eventtags)), 1);
-    overlaplowintensityRaw =nan(eventtags(length(eventtags)), 1);
     
-    toc
-        for nn = 1:length(eventtags)-1
-        shutterRaw((eventtags(nn) + 1):eventtags(nn + 1)) = ...
-            repmat(closedshutter(nn), (eventtags(nn+1)-eventtags(nn)), 1);
-        overlapfullintensityRaw((eventtags(nn) + 1):eventtags(nn + 1)) = ...
-            repmat(overlapstatus(nn), (eventtags(nn+1)-eventtags(nn)), 1);
-        overlaplowintensityRaw((eventtags(nn) + 1):eventtags(nn + 1)) = ...
-            repmat(overlapstatus2(nn), (eventtags(nn+1)-eventtags(nn)), 1);
-    end
+    eventtags = loadIfExists([handles.path '\eventtags.txt']);
+    closedshutter = (loadIfExists([handles.path '\shutterclosed.txt'], size(eventtags, 1)));
+    overlapstatus = (loadIfExists([handles.path '\overlapstatus.txt'], size(eventtags, 1)));
+    overlapstatus2 = (loadIfExists([handles.path '\overlapstatus2.txt'], size(eventtags, 1)));
+    
+    if breakUpData
+        
+        rawDataStore = tabularTextDatastore(filename);
+        EventTagn = [eventtags; 10^10];
+        
+        loadSave = false;
+        
+        for mm = 1:(length(EventTagn)-1)/numChunks
 
-    handles.closedshutterRaw = sparse(shutterRaw);
-    handles.overlapfullintensityRaw = sparse(overlapfullintensityRaw);
-    handles.overlaplowintensityRaw = sparse(overlaplowintensityRaw);
+            rawDataStore.ReadSize = EventTagn(numChunks*mm+1)-EventTagn(numChunks*mm-(numChunks-1));
+            rawdata = table2array(read(rawDataStore));
+
+            %initialize the arrays for holding ion info
+            [numshots,maxions] = size(rawdata);
+            eventtags = [EventTagn(((mm-1)*numChunks+1):mm*numChunks)-EventTagn(mm); numshots];
+            maxions = (maxions-2)/3;
+
+            ions_x = zeros(numshots, maxions);
+            ions_y = zeros(numshots, maxions);
+            ions_tof = zeros(numshots, maxions);
+
+            %save the info into respective arrays
+            handles.numHitsRaw = rawdata(:, 2);
+
+            for nn = 1:maxions
+                ions_x(:, nn) = rawdata(:, 3*nn);
+                ions_y(:, nn) = rawdata(:, 3*nn+1);
+                ions_tof(:, nn) = rawdata(:, 3*nn+2);
+            end
+
+            handles.ions_x = ions_x;
+            handles.ions_y = ions_y;
+            handles.ions_tof = ions_tof;
+
+            shutterRaw = zeros(numshots, 1);
+            overlapfullintensityRaw = zeros(numshots, 1);
+            overlaplowintensityRaw = zeros(numshots, 1);
+
+            for nn = 1:length(eventtags)-1
+                
+                shutterRaw((eventtags(nn) + 1):eventtags(nn + 1)) = ...
+                    repmat(closedshutter(nn), (eventtags(nn+1)-eventtags(nn)), 1);
+                
+                overlapfullintensityRaw((eventtags(nn) + 1):eventtags(nn + 1)) = ...
+                    repmat(overlapstatus(nn), (eventtags(nn+1)-eventtags(nn)), 1);
+                
+                overlaplowintensityRaw((eventtags(nn) + 1):eventtags(nn + 1)) = ...
+                    repmat(overlapstatus2(nn), (eventtags(nn+1)-eventtags(nn)), 1);
+                
+            end
+
+            handles.closedshutterRaw = shutterRaw;
+            handles.overlapfullintensityRaw = overlapfullintensityRaw;
+            handles.overlaplowintensityRaw = overlaplowintensityRaw;
+            
+            loaded_data = struct('datafile', handles.datafile, 'path', handles.path,...
+                'numHitsRaw', handles.numHitsRaw, 'ions_x', handles.ions_x,...
+                'ions_y', handles.ions_y, 'ions_tof', handles.ions_tof, 'closedshutterRaw', handles.closedshutterRaw,...
+                'overlapfullintensityRaw', handles.overlapfullintensityRaw,...
+                'overlaplowintensityRaw', handles.overlaplowintensityRaw);
+
+            if ~exist([handles.path '\analysis\loadedData'], 'dir')
+                mkdir([handles.path '\analysis\loadedData']);
+                pause(1)
+            end
+
+            timee = clock;
+            filename = [handles.datafile, '-loaded_data-', date, '-', num2str(timee(4)), '-',...
+                num2str(timee(5)), '-', num2str(floor(timee(6))), '_', num2str(mm), '.mat'];
+            filename = fullfile([handles.path '\analysis\loadedData'], filename);
+
+            save(filename, 'loaded_data', '-v7.3');
+
+        end
+        
+    else
+        
+        rawdata = sparse(load(filename));
+        
+        %initialize the arrays for holding ion info
+        [numshots,maxions] = size(rawdata);
+        eventtags = [eventtags; numshots];
+        maxions = (maxions-2)/3;
+
+        ions_x = zeros(numshots, maxions);
+        ions_y = zeros(numshots, maxions);
+        ions_tof = sparse(numshots, maxions);
+
+        %save the info into respective arrays
+        handles.numHitsRaw = rawdata(:, 2);
+
+        for nn = 1:maxions
+            ions_x(:, nn) = rawdata(:, 3*nn);
+            ions_y(:, nn) = rawdata(:, 3*nn+1);
+            ions_tof(:, nn) = rawdata(:, 3*nn+2);
+        end
+
+        handles.ions_x = ions_x;
+        handles.ions_y = ions_y;
+        handles.ions_tof = ions_tof;
+
+        shutterRaw = nan(eventtags(length(eventtags)), 1);
+        overlapfullintensityRaw = nan(eventtags(length(eventtags)), 1);
+        overlaplowintensityRaw =nan(eventtags(length(eventtags)), 1);
+
+        for nn = 1:length(eventtags)-1
+            shutterRaw((eventtags(nn) + 1):eventtags(nn + 1)) = ...
+                repmat(closedshutter(nn), (eventtags(nn+1)-eventtags(nn)), 1);
+            overlapfullintensityRaw((eventtags(nn) + 1):eventtags(nn + 1)) = ...
+                repmat(overlapstatus(nn), (eventtags(nn+1)-eventtags(nn)), 1);
+            overlaplowintensityRaw((eventtags(nn) + 1):eventtags(nn + 1)) = ...
+                repmat(overlapstatus2(nn), (eventtags(nn+1)-eventtags(nn)), 1);
+        end
+
+        handles.closedshutterRaw = sparse(shutterRaw);
+        handles.overlapfullintensityRaw = sparse(overlapfullintensityRaw);
+        handles.overlaplowintensityRaw = sparse(overlaplowintensityRaw);
+        
+    end
     
 elseif strcmp(ext, '.mat')
     
@@ -203,7 +274,6 @@ elseif strcmp(ext, '.mat')
     handles.datafile = loaded_data.datafile;
     handles.path = loaded_data.path;
     handles.numHitsRaw = loaded_data.numHitsRaw;
-%    handles.HitNoRaw = loaded_data.HitNoRaw;
     handles.ions_x = loaded_data.ions_x;
     handles.ions_y = loaded_data.ions_y;
     handles.ions_tof = loaded_data.ions_tof;
@@ -241,10 +311,11 @@ if loadSave
     save(filename, 'loaded_data', '-v7.3');
 
 end
-    
 
 %save any values saved to handles
 guidata(hObject, handles);
+
+clearvars -except handles
 
 set(handles.loadfile, 'string', 'load');
 
@@ -841,6 +912,7 @@ prepTimeEstimate = get(handles.prepTimeEst, 'value');
 saveData = get(handles.savePrepare, 'value');
 includePrepared = get(handles.includePrepared, 'value');
 loadCalib = get(handles.loadCalib, 'value');
+useBrokeData = get(handles.useBrokeData, 'value');
 
 %set length of ev array and theta array
 EVlength = 20;
@@ -903,6 +975,11 @@ end
 
 if includePrepared
 
+    if useBrokeData
+        set(handles.err, 'string', 'you cannot include previously prepared data with broken up data')
+        error('you cannot include previously prepared data with broken up data')
+    end
+    
     set(handles.err, 'string', 'please select your prepared file');
     
     if exist('handles', 'var') && isfield(handles, 'path')
@@ -1005,6 +1082,90 @@ if includePrepared
     
     clear prepared
     
+elseif useBrokeData
+
+    if exist('handles', 'var') && isfield(handles, 'path')
+        [loadFile, loadPath] = uigetfile(handles.path);
+    else
+        [loadFile, loadPath] = uigetfile();
+    end
+    
+    loadFile = loadFile(1:end-5);
+    
+    loadPath = dir([loadPath, '\*.mat']);
+    numfiles = length(loadPath);
+    
+    if ~isfield(handles, 'ions_tof')||~isfield(handles, 'ions_x')||~isfield(handles, 'ions_y')
+        set(handles.err, 'string', 'data is not loaded');
+        set(handles.prepare, 'string', 'prepare');
+        error('data is not loaded')
+    end
+
+    %take care of default values
+    if x0 == 1, x0 = 0; end
+    if y0 == 1, y0 = 0; end
+    if t0 == 1, t0 = 0; end
+    if V1 == 1, V1 = 2000; end
+    if VM == 1, VM = -2250; end
+    if ss == 1, ss = 40.5; end
+
+    if V1 < 500 || VM > -500 && (V1 ~= 1) && (VM ~= 1)
+        set(handles.err, 'string',...
+            'voltage values are unreasonable, V1 should be greater than 500 and VM should be less than -500');
+        set(handles.prepare, 'string', 'prepare');
+        error('voltage values are unreasonable, V1 should be greater than 500 and VM should be less than -500')
+    end
+    
+    if prepTimeEstimate
+
+        estimatedTime = 0;
+        set(handles.err, 'string', ['estimated completed prepare time: ' datestr(datetime('now')+seconds(estimatedTime))]);
+        drawnow
+        
+    end
+    
+    %call the prepare function that will generate the momentum matrix that is requried
+
+    handles.EV = [];
+    handles.momZ = [];
+    handles.momX = [];
+    handles.momY = [];
+    handles.hitNo = [];
+    handles.shotNo = [];
+    handles.numHits_processed = [];
+    handles.ions_tof_processed = [];
+    handles.ions_x_processed = [];
+    handles.ions_y_processed = [];
+    handles.closedshutter = [];
+    handles.overlapfullintensity = [];
+    handles.overlaplowintensity = [];
+    
+    for nn = 1:numfiles
+ 
+        load([loadPath, loadFile, num2str(nn), '.mat']);
+        
+        [EV, momZ, momX, momY, hitNo, shotNo, numHits_processed, ions_tof_processed,...
+            ions_x_processed, ions_y_processed, closedshutter, overlapfullintensity, overlaplowintensity] =...
+            prepare(V1, VM, ss, t0, x0, y0, mass, charge, maxEV, handles.ions_tof, handles.ions_x,...
+            handles.ions_y, handles.numHitsRaw, EVlength, Thetalength,...
+            handles.closedshutterRaw, handles.overlapfullintensityRaw, handles.overlaplowintensityRaw);
+        
+        handles.EV = [handles.EV; EV];
+        handles.momZ = [handles.momZ; momZ];
+        handles.momX = [handles.momX; momX];
+        handles.momY = [handles.momY; momY];
+        handles.hitNo = [handles.hitNo; hitNo];
+        handles.shotNo = [handles.shotNo; shotNo];
+        handles.numHits_processed = [handles.numHits_processed; numHits_processed];
+        handles.ions_tof_processed = [handles.ions_tof_processed; ions_tof_processed];
+        handles.ions_x_processed = [handles.ions_x_processed; ions_x_processed];
+        handles.ions_y_processed = [handles.ions_y_processed; ions_y_processed];
+        handles.closedshutter = [handles.closedshutter; closedshutter];
+        handles.overlapfullintensity = [handles.overlapfullintensity; overlapfullintensity];
+        handles.overlaplowintensity = [handles.overlaplowintensity; overlaplowintensity];
+    
+    end
+    
 else
     
     if ~isfield(handles, 'ions_tof')||~isfield(handles, 'ions_x')||~isfield(handles, 'ions_y')
@@ -1030,16 +1191,12 @@ else
     
     if prepTimeEstimate
 
-        %estimate how long it will take to load file
-        %VASILY this region is for you
-        
         estimatedTime = 0;
         set(handles.err, 'string', ['estimated completed prepare time: ' datestr(datetime('now')+seconds(estimatedTime))]);
         drawnow
         
     end
-    %call the prepare function that will generate the momentum matrix that is
-    %requried
+    %call the prepare function that will generate the momentum matrix that is requried
     
     [handles.EV, handles.momZ, handles.momX, handles.momY, handles.hitNo, handles.shotNo,...
         handles.numHits_processed, handles.ions_tof_processed, handles.ions_x_processed, handles.ions_y_processed,...
@@ -1945,3 +2102,44 @@ function loadCalib_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 % Hint: get(hObject,'Value') returns toggle state of loadCalib
+
+
+% --- Executes on button press in breakUpData.
+function breakUpData_Callback(hObject, eventdata, handles)
+% hObject    handle to breakUpData (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of breakUpData
+
+
+
+function numEventTags_Callback(hObject, eventdata, handles)
+% hObject    handle to numEventTags (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of numEventTags as text
+%        str2double(get(hObject,'String')) returns contents of numEventTags as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function numEventTags_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to numEventTags (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in checkbox63.
+function checkbox63_Callback(hObject, eventdata, handles)
+% hObject    handle to checkbox63 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of checkbox63
