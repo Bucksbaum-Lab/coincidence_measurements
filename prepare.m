@@ -19,11 +19,50 @@ function [EV, mom_tof, mom_x, mom_y, hitNo, shotNo, numHits, tof, rX, rY, shutte
 
 [numshots, maxions] = size(tof);
 
+for nn = 1:length(mass)
+    
+    massnn = mass(nn);
+    chargenn = charge(nn);
+    maxEVnn = maxEV(nn);
+    
+    evalc('Sim = Flym_Sim(chargenn, massnn, maxEVnn, 0, 0, ss, V1, VM);');
+    tof_Sim_min(nn) = reshape(Sim(2:2:end, 2), [length(eVArray), length(thetaArray)])*10^3;
+    
+    evalc('Sim = Flym_Sim(chargenn, massnn, maxEVnn, 180, 0, ss, V1, VM);');
+    tof_Sim_max(nn) = reshape(Sim(2:2:end, 2), [length(eVArray), length(thetaArray)])*10^3;
+    
+end
+
+tof_sensible = true(size(tof));
+
+for nn = 1:size(tof,1)
+    
+    tof_sensible_mm = false(size(tof));
+    
+    for mm = 1:length(mass)
+        
+        tof_sensible_mm = tof_sensible_mm | ((tof_Sim_min <= tof(:, nn)) & (tof(:, nn) <= nonSense_tof_max));
+    end
+    
+    tof_sensible = tof_sensible & tof_sensible_mm;
+
+end
+    
+tof = tof(:, tof_sensible);
+rX = rX(:, tof_sensible);
+rY = rY(:, tof_sensible);
+numHits = numHits(:, tof_sensible);
+shutter = shutter(:, tof_sensible);
+full = full(:, tof_sensible);
+low = low(:, tof_sensible);
+
 %create the vectors that will hold the hit number and shot number
 %associated with each event
-hitNo = (repmat(linspace(1, maxions, maxions), numshots, 1))';
+hitNo = repmat(linspace(1, maxions, maxions), numshots, 1);
+hitNo = (hitNo(:, tof_sensible))';
 hitNo = hitNo(:);
-shotNo = (repmat((linspace(1, numshots, numshots))', 1, maxions))';
+shotNo = repmat((linspace(1, numshots, numshots))', 1, maxions);
+shotNo = (shotNo(:, tof_sensible))';
 shotNo = shotNo(:);
 
 %create the vector that will record how many hits occur each shot

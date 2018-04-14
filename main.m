@@ -37,7 +37,7 @@ V1 <---> G <--------------> G <-----> VM
 
 % Edit the above text to modify the response to help main
 
-% Last Modified by GUIDE v2.5 12-Apr-2018 17:20:02
+% Last Modified by GUIDE v2.5 13-Apr-2018 10:40:24
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -1084,22 +1084,22 @@ if includePrepared
     
 elseif useBrokeData
 
+    set(handles.err, 'string', 'please select one loaded file');
+    
     if exist('handles', 'var') && isfield(handles, 'path')
         [loadFile, loadPath] = uigetfile(handles.path);
     else
         [loadFile, loadPath] = uigetfile();
+        handles.path = loadPath;
     end
+    
+    set(handles.err, 'string', 'no errors');
     
     loadFile = loadFile(1:end-5);
+    handles.datafile = loadFile;
     
-    loadPath = dir([loadPath, '\*.mat']);
-    numfiles = length(loadPath);
-    
-    if ~isfield(handles, 'ions_tof')||~isfield(handles, 'ions_x')||~isfield(handles, 'ions_y')
-        set(handles.err, 'string', 'data is not loaded');
-        set(handles.prepare, 'string', 'prepare');
-        error('data is not loaded')
-    end
+    numfiles = dir([loadPath, '\*.mat']);
+    numfiles = length(numfiles);
 
     %take care of default values
     if x0 == 1, x0 = 0; end
@@ -1146,9 +1146,9 @@ elseif useBrokeData
         
         [EV, momZ, momX, momY, hitNo, shotNo, numHits_processed, ions_tof_processed,...
             ions_x_processed, ions_y_processed, closedshutter, overlapfullintensity, overlaplowintensity] =...
-            prepare(V1, VM, ss, t0, x0, y0, mass, charge, maxEV, handles.ions_tof, handles.ions_x,...
-            handles.ions_y, handles.numHitsRaw, EVlength, Thetalength,...
-            handles.closedshutterRaw, handles.overlapfullintensityRaw, handles.overlaplowintensityRaw);
+            prepare(V1, VM, ss, t0, x0, y0, mass, charge, maxEV, loaded_data.ions_tof, loaded_data.ions_x,...
+            loaded_data.ions_y, loaded_data.numHitsRaw, EVlength, Thetalength,...
+            loaded_data.closedshutterRaw, loaded_data.overlapfullintensityRaw, loaded_data.overlaplowintensityRaw);
         
         handles.EV = [handles.EV; EV];
         handles.momZ = [handles.momZ; momZ];
@@ -1210,15 +1210,25 @@ end
 if saveData
     %build the output file
 
-    if ~exist([handles.path '\analysis'], 'dir')
-        mkdir([handles.path '\analysis']);
-        pause(1)
+   % if exist('handles', 'var') && isfield(handles, 'path')
+        if ~exist([handles.path '\analysis'], 'dir')
+            mkdir([handles.path '\analysis']);
+            
+            savedir = [handles.path '\analysis'];
+            pause(1)
+        end
+    %{    
+    else
+        set(handles.err, 'string', 'please select folder to save prepared files');
+        savedir = uigetdir();
     end
+    %}
+    
     
     timee = clock;
     filename = [handles.datafile, '-prepared-', date, '-', num2str(timee(4)), '-',...
         num2str(timee(5)), '-', num2str(floor(timee(6))), '.mat'];
-    filename = fullfile([handles.path '\analysis\'], filename);
+    filename = fullfile(savedir, filename);
     
     prepared.EV = handles.EV;
     prepared.momZ = handles.momZ;
@@ -2136,10 +2146,10 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
 end
 
 
-% --- Executes on button press in checkbox63.
-function checkbox63_Callback(hObject, eventdata, handles)
-% hObject    handle to checkbox63 (see GCBO)
+% --- Executes on button press in useBrokeData.
+function useBrokeData_Callback(hObject, eventdata, handles)
+% hObject    handle to useBrokeData (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-% Hint: get(hObject,'Value') returns toggle state of checkbox63
+% Hint: get(hObject,'Value') returns toggle state of useBrokeData

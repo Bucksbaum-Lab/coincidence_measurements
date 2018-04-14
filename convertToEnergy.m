@@ -15,10 +15,6 @@ rR = sqrt(rX.^2+rY.^2);
 
 [thetaArray, eVArray] = meshgrid(thetaArray, eVArray);
 
-nonSense_tof_max = max(max(tof_Sim));
-nonSense_tof_min = min(min(tof_Sim));
-isresonable_tof = (nonSense_tof_min <= tof)&(tof <= nonSense_tof_max);
-
 EV = nan(size(tof));
 Theta = nan(size(tof));
 
