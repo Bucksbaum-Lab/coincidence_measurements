@@ -37,7 +37,7 @@ V1 <---> G <--------------> G <-----> VM
 
 % Edit the above text to modify the response to help main
 
-% Last Modified by GUIDE v2.5 31-Jan-2018 11:49:44
+% Last Modified by GUIDE v2.5 15-Mar-2018 16:52:23
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -400,15 +400,17 @@ elseif (shutter == 3 && intensity == 4)
 end
 
 %plot PIPICO
-if (t0 ~= 1)&&(t0 ~= 0)&& ~(isnan(t0))
-    figure()
-    plot(tof(cond, 1)-t0, tof(cond, 2)-t0, '.')
-else
-    figure()
-    plot(tof(cond, 1), tof(cond, 2), '.')
+if(get(handles.plot_t1vst2, 'value'))
+    if (t0 ~= 1)&&(t0 ~= 0)&& ~(isnan(t0))
+        figure()
+        plot(tof(cond, 1)-t0, tof(cond, 2)-t0, '.')
+    else
+        figure()
+        plot(tof(cond, 1), tof(cond, 2), '.')
+    end
+    xlabel('tof 1st (ns)')
+    ylabel('tof 2nd (ns)')
 end
-xlabel('tof 1st (ns)')
-ylabel('tof 2nd (ns)')
 
 %apply the conditions
 tof = tof(cond, :);
@@ -425,40 +427,42 @@ tof = tof(tof ~= 0);
 
 
 %plot histograms of tof, x position, and y position
-if (x0 ~= 1)&&~(isnan(x0))
-    rX = rX-x0;
-    [values, bins] = hist(rX, tofNumBins);
-    
-    figure()
-    plot(bins, values)
-    hold on
-else
-    [values, bins] = hist(rX, tofNumBins);
-    
-    figure()
-    plot(bins, values)
-    hold on
-end
-xlabel('x (mm)')
-title(['number of hits ' num2str(numel(tof))])
+if(get(handles.plot_xy, 'value'))
+    if (x0 ~= 1)&&~(isnan(x0))
+        rX = rX-x0;
+        [values, bins] = hist(rX, tofNumBins);
 
-if (y0 ~= 1)&&~(isnan(y0))
-    rY = rY-y0;
-    [values, bins] = hist(rY, tofNumBins);
-    
-    figure()
-    plot(bins, values)
-    hold on
-else
-    [values, bins] = hist(rY, tofNumBins);
-    
-    figure()
-    plot(bins, values)
-    hold on
-end
-xlabel('y (mm)')
-title(['number of hits ' num2str(numel(tof))])
+        figure()
+        plot(bins, values)
+        hold on
+    else
+        [values, bins] = hist(rX, tofNumBins);
 
+        figure()
+        plot(bins, values)
+        hold on
+    end
+    xlabel('x (mm)')
+    title(['number of hits ' num2str(numel(tof))])
+
+    if (y0 ~= 1)&&~(isnan(y0))
+        rY = rY-y0;
+        [values, bins] = hist(rY, tofNumBins);
+
+        figure()
+        plot(bins, values)
+        hold on
+    else
+        [values, bins] = hist(rY, tofNumBins);
+
+        figure()
+        plot(bins, values)
+        hold on
+    end
+    xlabel('y (mm)')
+    title(['number of hits ' num2str(numel(tof))])
+end
+    
 if (t0 ~= 1)&&~(isnan(t0))
     tof = tof-t0;
     [values, bins] = hist(tof, tofNumBins);
@@ -642,6 +646,7 @@ if y0 == 1
 end
 
 tofNumBins = str2double(get(handles.tofNumBins, 'string'));
+
 figure();
 hist(rX - x0, tofNumBins);
 hold on;
@@ -1040,14 +1045,16 @@ else
     end
     %call the prepare function that will generate the momentum matrix that is
     %requried
+%     [handles.EV, handles.momZ, handles.momX, handles.momY] =...
+%         prepare2(V1, VM, ss, t0, x0, y0, mass, charge, maxEV, handles.ions_tof, handles.ions_x,...
+%                  handles.ions_y, handles.numHitsRaw, EVlength, Thetalength);
     
     [handles.EV, handles.momZ, handles.momX, handles.momY, handles.hitNo, handles.shotNo,...
-        handles.numHits_processed, handles.ions_tof_processed, handles.ions_x_processed, handles.ions_y_processed,...
-        handles.closedshutter, handles.overlapfullintensity, handles.overlaplowintensity] =...
+     handles.numHits_processed, handles.ions_tof_processed, handles.ions_x_processed, handles.ions_y_processed,...
+     handles.closedshutter, handles.overlapfullintensity, handles.overlaplowintensity] =...
         prepare(V1, VM, ss, t0, x0, y0, mass, charge, maxEV, handles.ions_tof, handles.ions_x,...
-        handles.ions_y, handles.numHitsRaw, EVlength, Thetalength,...
-        handles.closedshutterRaw, handles.overlapfullintensityRaw, handles.overlaplowintensityRaw);
-
+                handles.ions_y, handles.numHitsRaw, EVlength, Thetalength,...
+                handles.closedshutterRaw, handles.overlapfullintensityRaw, handles.overlaplowintensityRaw);
 end
 
 if saveData
@@ -1945,3 +1952,21 @@ function loadCalib_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 % Hint: get(hObject,'Value') returns toggle state of loadCalib
+
+
+% --- Executes on button press in plot_t1vst2.
+function plot_t1vst2_Callback(hObject, eventdata, handles)
+% hObject    handle to plot_t1vst2 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of plot_t1vst2
+
+
+% --- Executes on button press in plot_xy.
+function plot_xy_Callback(hObject, eventdata, handles)
+% hObject    handle to plot_xy (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of plot_xy

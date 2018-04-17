@@ -1,11 +1,12 @@
-function [EV, mom_tof, mom_x, mom_y, Theta] = convertToEnergy(tof, rX, rY, V1, VM, ss, charge, mass, maxEV, EVlength, Thetalength)
+function [EV, mom_tof, mom_x, mom_y, Theta] = ...
+    convertToEnergy(tof, rX, rY, V1, VM, ss, charge, mass, maxEV, EVlength, Thetalength, uniqueid)
 
 eVArray = linspace(0, maxEV, EVlength);
 
 thetaArray = linspace(0, 180, Thetalength);
 
 %do the simulations
-evalc('Sim = Flym_Sim(charge, mass, eVArray, thetaArray, 0, ss, V1, VM);');
+evalc('Sim = Flym_Sim(charge, mass, eVArray, thetaArray, 0, ss, V1, VM, uniqueid);');
 
 tof_Sim = reshape(Sim(2:2:end, 2), [length(eVArray), length(thetaArray)])*10^3;
 r_Sim = abs(reshape(Sim(2:2:end, 3)-55, [length(eVArray), length(thetaArray)]));
