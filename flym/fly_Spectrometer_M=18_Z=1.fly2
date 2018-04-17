@@ -2,15 +2,15 @@ particles {
 	coordinates = 0,
 	standard_beam {
 		tob = 0,
-		mass = sequence {12},
+		mass = sequence {18},
 		charge = 1,
 		cwf = 1,
 		color = 0,
-		x = sequence {14.7929},
+		x = sequence {12.5},
 		y = 55,
 		z = 55,
-		az = sequence {180},
-		el = sequence {0},
-		ke = sequence {10}
+		az = sequence {0},
+		el = sequence {180},
+		ke = sequence {0}
 	}
 }

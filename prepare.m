@@ -15,54 +15,52 @@ All of this is nicely opperated via the 'main.m' file which is a GUI.
 %}
 
 function [EV, mom_tof, mom_x, mom_y, hitNo, shotNo, numHits, tof, rX, rY, shutter, full, low] =...
-    prepare(V1, VM, ss, t0, x0, y0, mass, charge, maxEV, tof, rX, rY, numHits, EVlength, Thetalength, shutter, full, low)
+    prepare(V1, VM, ss, t0, x0, y0, mass, charge, maxEV, tof, rX, rY, numHits, eVArray,...
+    thetaArray, tof_Sim, r_Sim, shutter, full, low)
+
+tof = tof-t0;
+rX = rX-x0;
+rY = rY-y0;
 
 [numshots, maxions] = size(tof);
 
 for nn = 1:length(mass)
+
     
-    massnn = mass(nn);
-    chargenn = charge(nn);
-    maxEVnn = maxEV(nn);
+    evalc('Sim = Flym_Sim(charge(nn), mass(nn), maxEV(nn), 0, 0, ss, V1, VM);');
+    tof_Sim_min(nn) = reshape(Sim(2:2:end, 2), [1, 1])*10^3;
     
-    evalc('Sim = Flym_Sim(chargenn, massnn, maxEVnn, 0, 0, ss, V1, VM);');
-    tof_Sim_min(nn) = reshape(Sim(2:2:end, 2), [length(eVArray), length(thetaArray)])*10^3;
-    
-    evalc('Sim = Flym_Sim(chargenn, massnn, maxEVnn, 180, 0, ss, V1, VM);');
-    tof_Sim_max(nn) = reshape(Sim(2:2:end, 2), [length(eVArray), length(thetaArray)])*10^3;
+    evalc('Sim = Flym_Sim(charge(nn), mass(nn), maxEV(nn), 180, 0, ss, V1, VM);');
+    tof_Sim_max(nn) = reshape(Sim(2:2:end, 2), [1, 1])*10^3;
     
 end
 
-tof_sensible = true(size(tof));
+tof_sensible = false([size(tof,1),1]);
 
-for nn = 1:size(tof,1)
-    
-    tof_sensible_mm = false(size(tof));
+for nn = 1:size(tof,2)
     
     for mm = 1:length(mass)
         
-        tof_sensible_mm = tof_sensible_mm | ((tof_Sim_min <= tof(:, nn)) & (tof(:, nn) <= nonSense_tof_max));
+        tof_sensible = tof_sensible | ((tof_Sim_min(mm) <= tof(:, nn)) & (tof(:, nn) <= tof_Sim_max(mm)));
     end
-    
-    tof_sensible = tof_sensible & tof_sensible_mm;
 
 end
     
-tof = tof(:, tof_sensible);
-rX = rX(:, tof_sensible);
-rY = rY(:, tof_sensible);
-numHits = numHits(:, tof_sensible);
-shutter = shutter(:, tof_sensible);
-full = full(:, tof_sensible);
-low = low(:, tof_sensible);
+tof = tof(tof_sensible, :);
+rX = rX(tof_sensible, :);
+rY = rY(tof_sensible, :);
+numHits = numHits(tof_sensible, :);
+shutter = shutter(tof_sensible, :);
+full = full(tof_sensible, :);
+low = low(tof_sensible, :);
 
 %create the vectors that will hold the hit number and shot number
 %associated with each event
 hitNo = repmat(linspace(1, maxions, maxions), numshots, 1);
-hitNo = (hitNo(:, tof_sensible))';
+hitNo = (hitNo(tof_sensible, :))';
 hitNo = hitNo(:);
 shotNo = repmat((linspace(1, numshots, numshots))', 1, maxions);
-shotNo = (shotNo(:, tof_sensible))';
+shotNo = (shotNo(tof_sensible, :))';
 shotNo = shotNo(:);
 
 %create the vector that will record how many hits occur each shot
@@ -105,9 +103,7 @@ full = full(cond);
 low = low(cond);
 tof = tof(cond);
 %}
-tof = tof-t0;
-rX = rX-x0;
-rY = rY-y0;
+
 
 %initialize the momentum matrices
 EV = zeros(length(rX), length(mass));
@@ -120,5 +116,4 @@ mom_y = zeros(length(rX), length(mass));
 
 parfor ii = 1:length(mass)
 [EV(:, ii), mom_tof(:, ii), mom_x(:, ii), mom_y(:, ii)] =...
-        convertToEnergy(tof, rX, rY, V1, VM, ss, charge(ii), mass(ii), maxEV(ii), EVlength, Thetalength);
-end
+        convertToEnergy(tof, rX, rY, eVArray(:, ii), thetaArray(:, ii), tof_Sim(:, :, ii), r_Sim(:, :, ii), mass(ii));end

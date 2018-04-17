@@ -2,7 +2,7 @@ particles {
 	coordinates = 0,
 	standard_beam {
 		tob = 0,
-		mass = sequence {12},
+		mass = sequence {1},
 		charge = 1,
 		cwf = 1,
 		color = 0,

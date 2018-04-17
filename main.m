@@ -149,77 +149,92 @@ if strcmp(ext, '.txt')
     
     if breakUpData
         
+        timee = clock;
+        loadInfo = [date, '-', num2str(timee(4)), '-', num2str(timee(5)), '-', num2str(floor(timee(6))), '_'];
+        
         rawDataStore = tabularTextDatastore(filename);
         EventTagn = [eventtags; 10^10];
         
         loadSave = false;
         
-        for mm = 1:(length(EventTagn)-1)/numChunks
+        for mm = 1:floor((length(EventTagn)-1)/numChunks)
 
-            rawDataStore.ReadSize = EventTagn(numChunks*mm+1)-EventTagn(numChunks*mm-(numChunks-1));
-            rawdata = table2array(read(rawDataStore));
-
-            %initialize the arrays for holding ion info
-            [numshots,maxions] = size(rawdata);
-            eventtags = [EventTagn(((mm-1)*numChunks+1):mm*numChunks)-EventTagn(mm); numshots];
-            maxions = (maxions-2)/3;
-
-            ions_x = zeros(numshots, maxions);
-            ions_y = zeros(numshots, maxions);
-            ions_tof = zeros(numshots, maxions);
-
-            %save the info into respective arrays
-            handles.numHitsRaw = rawdata(:, 2);
-
-            for nn = 1:maxions
-                ions_x(:, nn) = rawdata(:, 3*nn);
-                ions_y(:, nn) = rawdata(:, 3*nn+1);
-                ions_tof(:, nn) = rawdata(:, 3*nn+2);
-            end
-
-            handles.ions_x = ions_x;
-            handles.ions_y = ions_y;
-            handles.ions_tof = ions_tof;
-
-            shutterRaw = zeros(numshots, 1);
-            overlapfullintensityRaw = zeros(numshots, 1);
-            overlaplowintensityRaw = zeros(numshots, 1);
-
-            for nn = 1:length(eventtags)-1
-                
-                shutterRaw((eventtags(nn) + 1):eventtags(nn + 1)) = ...
-                    repmat(closedshutter(nn), (eventtags(nn+1)-eventtags(nn)), 1);
-                
-                overlapfullintensityRaw((eventtags(nn) + 1):eventtags(nn + 1)) = ...
-                    repmat(overlapstatus(nn), (eventtags(nn+1)-eventtags(nn)), 1);
-                
-                overlaplowintensityRaw((eventtags(nn) + 1):eventtags(nn + 1)) = ...
-                    repmat(overlapstatus2(nn), (eventtags(nn+1)-eventtags(nn)), 1);
-                
-            end
-
-            handles.closedshutterRaw = shutterRaw;
-            handles.overlapfullintensityRaw = overlapfullintensityRaw;
-            handles.overlaplowintensityRaw = overlaplowintensityRaw;
+            if hasdata(rawDataStore)
             
-            loaded_data = struct('datafile', handles.datafile, 'path', handles.path,...
-                'numHitsRaw', handles.numHitsRaw, 'ions_x', handles.ions_x,...
-                'ions_y', handles.ions_y, 'ions_tof', handles.ions_tof, 'closedshutterRaw', handles.closedshutterRaw,...
-                'overlapfullintensityRaw', handles.overlapfullintensityRaw,...
-                'overlaplowintensityRaw', handles.overlaplowintensityRaw);
+                rawDataStore.ReadSize = EventTagn(numChunks*mm+1)-EventTagn(numChunks*mm-(numChunks-1));
+                rawdata = table2array(read(rawDataStore));
 
-            if ~exist([handles.path '\analysis\loadedData'], 'dir')
-                mkdir([handles.path '\analysis\loadedData']);
-                pause(1)
+                %initialize the arrays for holding ion info
+                [numshots,maxions] = size(rawdata);
+                eventtags = [EventTagn(((mm-1)*numChunks+1):mm*numChunks)-EventTagn((mm-1)*numChunks+1); numshots];
+                maxions = (maxions-2)/3;
+                
+                desiredSize = rawDataStore.ReadSize;
+                
+                while (numshots ~= desiredSize) && hasdata(rawDataStore)
+                
+                    rawDataStore.ReadSize = rawDataStore.ReadSize - numshots;
+                    rawdata = [rawdata; table2array(read(rawDataStore))];
+                    
+                    [numshots, ~] = size(rawdata);
+                    
+                end
+
+                ions_x = zeros(numshots, maxions);
+                ions_y = zeros(numshots, maxions);
+                ions_tof = zeros(numshots, maxions);
+
+                %save the info into respective arrays
+                handles.numHitsRaw = rawdata(:, 2);
+
+                for nn = 1:maxions
+                    ions_x(:, nn) = rawdata(:, 3*nn);
+                    ions_y(:, nn) = rawdata(:, 3*nn+1);
+                    ions_tof(:, nn) = rawdata(:, 3*nn+2);
+                end
+
+                handles.ions_x = ions_x;
+                handles.ions_y = ions_y;
+                handles.ions_tof = ions_tof;
+
+                shutterRaw = zeros(numshots, 1);
+                overlapfullintensityRaw = zeros(numshots, 1);
+                overlaplowintensityRaw = zeros(numshots, 1);
+
+                for nn = 1:length(eventtags)-1
+
+                    shutterRaw((eventtags(nn) + 1):eventtags(nn + 1)) = ...
+                        repmat(closedshutter(((mm-1)*numChunks+1)+nn-1), (eventtags(nn+1)-eventtags(nn)), 1);
+
+                    overlapfullintensityRaw((eventtags(nn) + 1):eventtags(nn + 1)) = ...
+                        repmat(overlapstatus(((mm-1)*numChunks+1)+nn-1), (eventtags(nn+1)-eventtags(nn)), 1);
+
+                    overlaplowintensityRaw((eventtags(nn) + 1):eventtags(nn + 1)) = ...
+                        repmat(overlapstatus2(((mm-1)*numChunks+1)+nn-1), (eventtags(nn+1)-eventtags(nn)), 1);
+
+                end
+
+                handles.closedshutterRaw = shutterRaw;
+                handles.overlapfullintensityRaw = overlapfullintensityRaw;
+                handles.overlaplowintensityRaw = overlaplowintensityRaw;
+
+                loaded_data = struct('datafile', handles.datafile, 'path', handles.path,...
+                    'numHitsRaw', handles.numHitsRaw, 'ions_x', handles.ions_x,...
+                    'ions_y', handles.ions_y, 'ions_tof', handles.ions_tof, 'closedshutterRaw', handles.closedshutterRaw,...
+                    'overlapfullintensityRaw', handles.overlapfullintensityRaw,...
+                    'overlaplowintensityRaw', handles.overlaplowintensityRaw);
+
+                if ~exist([handles.path '\analysis\loadedData'], 'dir')
+                    mkdir([handles.path '\analysis\loadedData']);
+                    pause(1)
+                end
+
+                filename = [handles.datafile, '-loaded_data-', loadInfo, num2str(mm), '.mat'];
+                filename = fullfile([handles.path '\analysis\loadedData'], filename);
+
+                save(filename, 'loaded_data', '-v7.3');
+
             end
-
-            timee = clock;
-            filename = [handles.datafile, '-loaded_data-', date, '-', num2str(timee(4)), '-',...
-                num2str(timee(5)), '-', num2str(floor(timee(6))), '_', num2str(mm), '.mat'];
-            filename = fullfile([handles.path '\analysis\loadedData'], filename);
-
-            save(filename, 'loaded_data', '-v7.3');
-
         end
         
     else
@@ -1058,11 +1073,13 @@ if includePrepared
             
         end
         
+        [eVArray, thetaArray, tof_Sim, r_Sim] = makeSimArrays(V1, VM, ss, mass, charge, maxEV, EVlength, Thetalength);
+        
         [handles.EV, handles.momZ, handles.momX, handles.momY, handles.hitNo, handles.shotNo,...
         handles.numHits_processed, handles.ions_tof_processed, handles.ions_x_processed, handles.ions_y_processed,...
         handles.closedshutter, handles.overlapfullintensity, handles.overlaplowintensity] =...
         prepare(V1, VM, ss, t0, x0, y0, notincluded(:, 1), notincluded(:, 2), notincluded(:, 3), handles.ions_tof,...
-        handles.ions_x, handles.ions_y, handles.numHitsRaw, EVlength, Thetalength,...
+        handles.ions_x, handles.ions_y, handles.numHitsRaw, eVArray, thetaArray, tof_Sim, r_Sim,...
         handles.closedshutterRaw, handles.overlapfullintensityRaw, handles.overlaplowintensityRaw);
         
         handles.EV = [handles.EV, prepared.EV(:, preparedIndex)];
@@ -1140,14 +1157,18 @@ elseif useBrokeData
     handles.overlapfullintensity = [];
     handles.overlaplowintensity = [];
     
+    
+    [eVArray, thetaArray, tof_Sim, r_Sim] = makeSimArrays(V1, VM, ss, mass, charge, maxEV, EVlength, Thetalength);
+    
     for nn = 1:numfiles
  
         load([loadPath, loadFile, num2str(nn), '.mat']);
         
+        
         [EV, momZ, momX, momY, hitNo, shotNo, numHits_processed, ions_tof_processed,...
             ions_x_processed, ions_y_processed, closedshutter, overlapfullintensity, overlaplowintensity] =...
             prepare(V1, VM, ss, t0, x0, y0, mass, charge, maxEV, loaded_data.ions_tof, loaded_data.ions_x,...
-            loaded_data.ions_y, loaded_data.numHitsRaw, EVlength, Thetalength,...
+            loaded_data.ions_y, loaded_data.numHitsRaw, eVArray, thetaArray, tof_Sim, r_Sim,...
             loaded_data.closedshutterRaw, loaded_data.overlapfullintensityRaw, loaded_data.overlaplowintensityRaw);
         
         handles.EV = [handles.EV; EV];
@@ -1198,11 +1219,13 @@ else
     end
     %call the prepare function that will generate the momentum matrix that is requried
     
+    [eVArray, thetaArray, tof_Sim, r_Sim] = makeSimArrays(V1, VM, ss, mass, charge, maxEV, EVlength, Thetalength);
+    
     [handles.EV, handles.momZ, handles.momX, handles.momY, handles.hitNo, handles.shotNo,...
         handles.numHits_processed, handles.ions_tof_processed, handles.ions_x_processed, handles.ions_y_processed,...
         handles.closedshutter, handles.overlapfullintensity, handles.overlaplowintensity] =...
         prepare(V1, VM, ss, t0, x0, y0, mass, charge, maxEV, handles.ions_tof, handles.ions_x,...
-        handles.ions_y, handles.numHitsRaw, EVlength, Thetalength,...
+        handles.ions_y, handles.numHitsRaw, eVArray, thetaArray, tof_Sim, r_Sim,...
         handles.closedshutterRaw, handles.overlapfullintensityRaw, handles.overlaplowintensityRaw);
 
 end
@@ -1210,25 +1233,15 @@ end
 if saveData
     %build the output file
 
-   % if exist('handles', 'var') && isfield(handles, 'path')
-        if ~exist([handles.path '\analysis'], 'dir')
-            mkdir([handles.path '\analysis']);
-            
-            savedir = [handles.path '\analysis'];
-            pause(1)
-        end
-    %{    
-    else
-        set(handles.err, 'string', 'please select folder to save prepared files');
-        savedir = uigetdir();
+    if ~exist([handles.path '\analysis'], 'dir')
+        mkdir([handles.path '\analysis']);
+        pause(1)
     end
-    %}
-    
     
     timee = clock;
     filename = [handles.datafile, '-prepared-', date, '-', num2str(timee(4)), '-',...
         num2str(timee(5)), '-', num2str(floor(timee(6))), '.mat'];
-    filename = fullfile(savedir, filename);
+    filename = fullfile([handles.path '\analysis\'], filename);
     
     prepared.EV = handles.EV;
     prepared.momZ = handles.momZ;
