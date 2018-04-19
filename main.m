@@ -1510,21 +1510,21 @@ for XX = 1:Textras
     intensity = get(handles.intensity, 'value');
     
     if (shutter == 1 && intensity == 1)
-        cond = cond & handles.closedshutter & ~handles.overlapfullintensity & ~handles.overlaplowintensity;
-    elseif (shutter == 1 && intensity == 2)
-        cond = cond & handles.closedshutter & handles.overlapfullintensity;
-    elseif (shutter == 1 && intensity == 3)
-        cond = cond & handles.closedshutter & handles.overlaplowintensity;
-    elseif (shutter == 1 && intensity == 4)
-        cond = cond & handles.closedshutter;
-    elseif (shutter == 2 && intensity == 1)
         cond = cond & ~handles.closedshutter & ~handles.overlapfullintensity & ~handles.overlaplowintensity;
-    elseif (shutter == 2 && intensity == 2)
+    elseif (shutter == 1 && intensity == 2)
         cond = cond & ~handles.closedshutter & handles.overlapfullintensity;
-    elseif (shutter == 2 && intensity == 3)
+    elseif (shutter == 1 && intensity == 3)
         cond = cond & ~handles.closedshutter & handles.overlaplowintensity;
-    elseif (shutter == 2 && intensity == 4)
+    elseif (shutter == 1 && intensity == 4)
         cond = cond & ~handles.closedshutter;
+    elseif (shutter == 2 && intensity == 1)
+        cond = cond & handles.closedshutter & ~handles.overlapfullintensity & ~handles.overlaplowintensity;
+    elseif (shutter == 2 && intensity == 2)
+        cond = cond & handles.closedshutter & handles.overlapfullintensity;
+    elseif (shutter == 2 && intensity == 3)
+        cond = cond & handles.closedshutter & handles.overlaplowintensity;
+    elseif (shutter == 2 && intensity == 4)
+        cond = cond & handles.closedshutter;
     elseif (shutter == 3 && intensity == 1)
         cond = cond & ~handles.overlapfullintensity & ~handles.overlaplowintensity;
     elseif (shutter == 3 && intensity == 2)

@@ -2,8 +2,8 @@
 
 f = momentumPlotsFunctions();
 
-filename= ['G:\\2018_02_09\\analysis\\Acetylene_266_800_1300_4p3e9torr_80fs_DAn_DAn-cut-23-Feb-2018-22-4-41_M=1,12,13_Z=1(10eV, dpx=3)_' ...
-           'OPEN.mat'];
+filename= ['C:\Data\2018_03_09\analysis\'...
+    'Acetylene_5p4en10torr_266_5p6mW_1300_38mW_800_103mW_500fsDelay_DAn_DAn-loaded_data-18-Apr-2018-16-18-29_-cut-open.mat'];
 load(filename);
 
 [parallel_proj, perpendicular_proj]  =... 
@@ -16,12 +16,12 @@ f.momHists(output)
 
 %%
 figure
-f.particleKERhist(1, output.partEnergyOut, output.mass, 35, 10)
+f.particleKERhist(1, output.partEnergyOut, output.mass, 60, 30)
 
 %%
 figure
 [Xp, Yp, N_OPEN] = ...
-    f.momentum2dDistPolar(parallel_proj, perpendicular_proj, [200, 0, 5], [12, 0, pi/2],...
+    f.momentum2dDistPolar(parallel_proj, perpendicular_proj, [15, 0, 8], [6, 0, pi/2],...
                               'control on', 'H^{+}', 'C^{+}', 'CH^{+}');
 %%
 figure
@@ -29,17 +29,19 @@ f.momentum2dDistCartesian(parallel_proj, perpendicular_proj, 14, ...
                           'control off', 'H^{+}', 'C^{+}', 'CH^{+}')
 %%
 figure
-plot((pi/48:pi/24:(pi/2-pi/48))*180/pi, sum(N_CLOSED(51:100, 1:12), 1) )
+%(pi/48:pi/24:(pi/2-pi/48))*180/pi, 
+errorbar(sum(N_CLOSED(5:5, 1:7), 1), 1./sqrt(sum(N_CLOSED(5:5, 1:7), 1)) )
 hold on
-plot((pi/48:pi/24:(pi/2-pi/48))*180/pi, sum(N_OPEN((51:100), 1:12), 1))
-title('Integrated from |p| = 2.5 to |p| = 3.5')
+errorbar(sum(N_OPEN(5:5, 1:7), 1), 1./sqrt(sum(N_OPEN(5:5, 1:7), 1)) )
+title('Integrated from |p| = 2.13 to |p| = 4.26')
 xlabel('Angle (degrees)')
 ylabel('counts')
 legend('control off','control on','Location','southeast')
 grid on
 
 %%
-pl = pcolor(Xp, Yp, (N_OPEN - N_CLOSED)));
+figure
+pl = pcolor(Xp, Yp, (N_OPEN/sum(sum(N_OPEN)) - N_CLOSED/sum(sum(N_CLOSED))));
 set(pl, 'EdgeColor', 'none');
 pl;
 axis equal tight

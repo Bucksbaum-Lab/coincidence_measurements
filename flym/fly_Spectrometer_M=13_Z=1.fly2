@@ -11,6 +11,6 @@ particles {
 		z = 55,
 		az = sequence {180},
 		el = sequence {0},
-		ke = sequence {10}
+		ke = sequence {30}
 	}
 }
