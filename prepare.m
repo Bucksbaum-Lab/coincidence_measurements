@@ -14,9 +14,11 @@ All of this is nicely opperated via the 'main.m' file which is a GUI.
 %------Last Edited by and Original Author - Chelsea Liekhus-Schmaltz------% 
 %}
 
-function [EV, mom_tof, mom_x, mom_y, hitNo, shotNo, numHits, tof, rX, rY, shutter, full, low] =...
+function [EV, mom_tof, mom_x, mom_y, hitNo, shotNo, numHits, tof, rX, rY, shutterStatus,...
+    intensityStatus, polarizationStatus, paramStatus, delayStatus] =...
     prepare(V1, VM, ss, t0, x0, y0, mass, charge, maxEV, tof, rX, rY, numHits, eVArray,...
-    thetaArray, tof_Sim, r_Sim, shutter, full, low)
+    thetaArray, tof_Sim, r_Sim, shutterStatus, intensityStatus, polarizationStatus,...
+    paramStatus, delayStatus, shotZero)
 
 tof = tof-t0;
 rX = rX-x0;
@@ -50,16 +52,18 @@ tof = tof(tof_sensible, :);
 rX = rX(tof_sensible, :);
 rY = rY(tof_sensible, :);
 numHits = numHits(tof_sensible, :);
-shutter = shutter(tof_sensible, :);
-full = full(tof_sensible, :);
-low = low(tof_sensible, :);
+shutterStatus = shutterStatus(tof_sensible, :);
+intensityStatus = intensityStatus(tof_sensible, :);
+polarizationStatus = polarizationStatus(tof_sensible, :);
+paramStatus = paramStatus(tof_sensible, :);
+delayStatus = delayStatus(tof_sensible, :);
 
 %create the vectors that will hold the hit number and shot number
 %associated with each event
 hitNo = repmat(linspace(1, maxions, maxions), numshots, 1);
 hitNo = (hitNo(tof_sensible, :))';
 hitNo = hitNo(:);
-shotNo = repmat((linspace(1, numshots, numshots))', 1, maxions);
+shotNo = repmat((linspace(1, numshots, numshots))', 1, maxions)+shotZero;
 shotNo = (shotNo(tof_sensible, :))';
 shotNo = shotNo(:);
 
@@ -69,17 +73,25 @@ numHits = repmat(numHits, 1, maxions);
 numHits = (numHits)';
 numHits = numHits(:);
 
-shutter = repmat(shutter, 1, maxions);
-shutter = (shutter)';
-shutter = shutter(:);
+shutterStatus = repmat(shutterStatus, 1, maxions);
+shutterStatus = (shutterStatus)';
+shutterStatus = shutterStatus(:);
 
-full = repmat(full, 1, maxions);
-full = (full)';
-full = full(:);
+intensityStatus = repmat(intensityStatus, 1, maxions);
+intensityStatus = (intensityStatus)';
+intensityStatus = intensityStatus(:);
 
-low = repmat(low, 1, maxions);
-low = (low)';
-low = low(:);
+polarizationStatus = repmat(polarizationStatus, 1, maxions);
+polarizationStatus = (polarizationStatus)';
+polarizationStatus = polarizationStatus(:);
+
+paramStatus = repmat(paramStatus, 1, maxions);
+paramStatus = (paramStatus)';
+paramStatus = paramStatus(:);
+
+delayStatus = repmat(delayStatus, 1, maxions);
+delayStatus = (delayStatus)';
+delayStatus = delayStatus(:);
 
 tof = tof';
 rX = rX';
@@ -98,12 +110,12 @@ rY = rY(cond);
 hitNo = hitNo(cond);
 shotNo = shotNo(cond);
 numHits = numHits(cond);
-shutter = shutter(cond);
-full = full(cond);
-low = low(cond);
+shutterStatus = shutterStatus(cond);
+intensityStatus = intensityStatus(cond);
+polarizationStatus = polarizationStatus(cond);
+paramStatus = paramStatus(cond);
+delayStatus = delayStatus(cond);
 tof = tof(cond);
-%}
-
 
 %initialize the momentum matrices
 EV = zeros(length(rX), length(mass));
@@ -116,4 +128,5 @@ mom_y = zeros(length(rX), length(mass));
 
 parfor ii = 1:length(mass)
 [EV(:, ii), mom_tof(:, ii), mom_x(:, ii), mom_y(:, ii)] =...
-        convertToEnergy(tof, rX, rY, eVArray(:, ii), thetaArray(:, ii), tof_Sim(:, :, ii), r_Sim(:, :, ii), mass(ii));end
+        convertToEnergy(tof, rX, rY, eVArray(:, ii), thetaArray(:, ii), tof_Sim(:, :, ii), r_Sim(:, :, ii), mass(ii));
+end
