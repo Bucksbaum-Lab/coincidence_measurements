@@ -1,0 +1,8 @@
+# flym files created by the 
+*.fly2
+
+#output files from simion
+*.txt
+
+#the pa0 file, which changes every time
+TopGem.pa0
