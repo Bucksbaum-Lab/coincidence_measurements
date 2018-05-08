@@ -269,7 +269,7 @@ if strcmp(ext, '.txt')
                     'polarizationstatusRaw', handles.polarizationstatusRaw,...
                     'paramstatusRaw', handles.paramstatusRaw,...
                     'intensitystatusRaw', handles.intensitystatusRaw,...
-                    'shotStartZero', EventTagn((mm-1)*numChunks+1)-1,...
+                    'shotsStartZero', EventTagn((mm-1)*numChunks+1)-1,...
                     'delayInfo', delayInfo, 'polarInfo', polarInfo);
 
                 if ~exist([handles.path '\analysis\loadedData'], 'dir')
@@ -1057,7 +1057,7 @@ if includePrepared
         handles.polarizationStatus = prepared.polarizationStatus;
         handles.paramStatus = prepared.paramStatus;
         handles.delayStatus = prepared.delayStatus;
-        handles.shotZero = prepared.shotZero;
+        handles.shotsStartZero = 0;
         handles.polarInfo = prepared.polarInfo;
         handles.delayInfo = prepared.delayInfo;
         handles.datafile = prepared.datafile;
@@ -1176,9 +1176,11 @@ elseif useBrokeData
     handles.ions_tof_processed = [];
     handles.ions_x_processed = [];
     handles.ions_y_processed = [];
-    handles.closedshutter = [];
-    handles.overlapfullintensity = [];
-    handles.overlaplowintensity = [];
+    handles.shutterStatus = [];
+    handles.intensityStatus = [];
+    handles.polarizationStatus = [];
+    handles.paramStatus = [];
+    handles.delayStatus = [];
     
     
     [eVArray, thetaArray, tof_Sim, r_Sim] = makeSimArrays(V1, VM, ss, mass, charge, maxEV, EVlength, Thetalength);
@@ -1193,8 +1195,8 @@ elseif useBrokeData
             polarizationStatus, paramStatus, delayStatus] =...
             prepare(V1, VM, ss, t0, x0, y0, mass, charge, maxEV, loaded_data.ions_tof, loaded_data.ions_x,...
             loaded_data.ions_y, loaded_data.numHitsRaw, eVArray, thetaArray, tof_Sim, r_Sim,...
-            handles.shutterstatusRaw, handles.intensityStatusRaw, handles.polarizationStatusRaw,...
-            handles.paramStatusRaw, handles.delayStatusRaw, loaded_data.shotsStartZero);
+            loaded_data.shutterstatusRaw, loaded_data.intensitystatusRaw, loaded_data.polarizationstatusRaw,...
+            loaded_data.paramstatusRaw, loaded_data.delaystatusRaw, loaded_data.shotsStartZero);
         
         handles.EV = [handles.EV; EV];
         handles.momZ = [handles.momZ; momZ];
@@ -1213,6 +1215,10 @@ elseif useBrokeData
         handles.delayStatus = [handles.delayStatus; delayStatus];
     
     end
+    
+    handles.shotsStartZero = loaded_data.shotsStartZero;
+    handles.polarInfo = loaded_data.polarInfo;
+    handles.delayInfo = loaded_data.delayInfo;
     
 else
     
@@ -1287,7 +1293,7 @@ if saveData
     prepared.polarizationStatus = handles.polarizationStatus;
     prepared.paramStatus = handles.paramStatus;
     prepared.delayStatus = handles.delayStatus;
-    prepared.shotZero = handles.shotZero;
+    prepared.shotsStartZero = handles.shotsStartZero;
     prepared.polarInfo = handles.polarInfo;
     prepared.delayInfo = handles.delayInfo;
     prepared.mass = mass;
