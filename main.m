@@ -37,7 +37,7 @@ V1 <---> G <--------------> G <-----> VM
 
 % Edit the above text to modify the response to help main
 
-% Last Modified by GUIDE v2.5 05-May-2018 18:08:48
+% Last Modified by GUIDE v2.5 08-May-2018 11:26:35
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -75,6 +75,8 @@ function main_OpeningFcn(hObject, eventdata, handles, varargin)
 
 % Choose default command line output for main
 handles.output = hObject;
+
+set(handles.chunksStartNum, 'string', '0');
 
 % Update handles structure
 guidata(hObject, handles);
@@ -155,7 +157,7 @@ if strcmp(ext, '.txt')
         delayInfo = 0;
     end
     
-    if exist([handles.path '\polarizationInfo.txt']) == 2
+    if exist([handles.path '\polarizationInfo.txt'], 'file') == 2
         polarInfo = loadIfExists([handles.path '\polarizationInfo.txt']);
         x = cell(size((polarInfo(1,:))',1)+1,1);
         for nn = 1:size((polarInfo(1,:))',1)
@@ -174,8 +176,11 @@ if strcmp(ext, '.txt')
     delaystatus = loadIfExists([handles.path '\Delay.txt'], size(eventtags, 1));
     polarizationstatus = loadIfExists([handles.path '\Polarization.txt'], size(eventtags, 1));
     paramstatus = loadIfExists([handles.path '\ParamIndex.txt'], size(eventtags, 1));
+    intensitystatus = loadIfExists([handles.path '\Intensity.txt'], size(eventtags,1));
     
     if breakUpData
+        
+        chunksStartNum = str2double(get(handles.chunksStartNum, 'string'));
         
         timee = clock;
         loadInfo = [date, '-', num2str(timee(4)), '-', num2str(timee(5)), '-', num2str(floor(timee(6))), '_'];
@@ -229,6 +234,7 @@ if strcmp(ext, '.txt')
                 delaystatusRaw = zeros(numshots, 1);
                 polarizationstatusRaw = zeros(numshots, 1);
                 paramstatusRaw = zeros(numshots, 1);
+                intensitystatusRaw = zeros(numshots, 1);
                 
                 for nn = 1:length(eventtags)-1
 
@@ -243,6 +249,9 @@ if strcmp(ext, '.txt')
                     
                     paramstatusRaw((eventtags(nn) + 1):eventtags(nn + 1)) = ...
                         repmat(paramstatus(((mm-1)*numChunks+1)+nn-1), (eventtags(nn+1)-eventtags(nn)), 1);
+                    
+                    intensitystatusRaw((eventtags(nn) + 1):eventtags(nn + 1)) = ...
+                        repmat(intensitystatus(((mm-1)*numChunks+1)+nn-1), (eventtags(nn+1)-eventtags(nn)), 1);
 
                 end
 
@@ -250,12 +259,17 @@ if strcmp(ext, '.txt')
                 handles.delaystatusRaw = delaystatusRaw;
                 handles.polarizationstatusRaw = polarizationstatusRaw;
                 handles.paramstatusRaw = paramstatusRaw;
+                handles.intensitystatusRaw = intensitystatusRaw;
 
                 loaded_data = struct('datafile', handles.datafile, 'path', handles.path,...
                     'numHitsRaw', handles.numHitsRaw, 'ions_x', handles.ions_x,...
-                    'ions_y', handles.ions_y, 'ions_tof', handles.ions_tof, 'closedshutterRaw', handles.shutterstatusRaw,...
-                    'overlapfullintensityRaw', handles.overlapfullintensityRaw,...
-                    'overlaplowintensityRaw', handles.overlaplowintensityRaw, 'shotStartZero', EventTagn((mm-1)*numChunks+1)-1,...
+                    'ions_y', handles.ions_y, 'ions_tof', handles.ions_tof,...
+                    'shutterstatusRaw', handles.shutterstatusRaw,...
+                    'delaystatusRaw', handles.delaystatusRaw,...
+                    'polarizationstatusRaw', handles.polarizationstatusRaw,...
+                    'paramstatusRaw', handles.paramstatusRaw,...
+                    'intensitystatusRaw', handles.intensitystatusRaw,...
+                    'shotStartZero', EventTagn((mm-1)*numChunks+1)-1,...
                     'delayInfo', delayInfo, 'polarInfo', polarInfo);
 
                 if ~exist([handles.path '\analysis\loadedData'], 'dir')
@@ -263,7 +277,7 @@ if strcmp(ext, '.txt')
                     pause(1)
                 end
 
-                filename = [handles.datafile, '-loaded_data-', loadInfo, num2str(mm), '.mat'];
+                filename = [handles.datafile, '-loaded_data-', loadInfo, num2str(chunksStartNum+mm), '.mat'];
                 filename = fullfile([handles.path '\analysis\loadedData'], filename);
 
                 save(filename, 'loaded_data', '-v7.3');
@@ -330,10 +344,41 @@ elseif strcmp(ext, '.mat')
     handles.ions_x = loaded_data.ions_x;
     handles.ions_y = loaded_data.ions_y;
     handles.ions_tof = loaded_data.ions_tof;
-    handles.shutterstatusRaw = loaded_data.closedshutterRaw;
-    handles.delaystatusRaw = loaded_data.chosenDelayRaw;
-    handles.polarizationstatusRaw = loaded_data.chosenPolarizationRaw;
-    handles.paramstatusRaw = loaded_data.chosenParamRaw;
+    handles.shutterstatusRaw = loaded_data.shutterstatusRaw;
+    handles.delaystatusRaw = loaded_data.delaystatusRaw;
+    handles.polarizationstatusRaw = loaded_data.polarizationstatusRaw;
+    handles.paramstatusRaw = loaded_data.paramstatusRaw;
+    handles.intensitystatusRaw = loaded_data.intensitystatusRaw;
+    handles.delayInfo = loaded_data.delayInfo;
+    handles.polarInfo = loaded_data.polarInfo;
+    
+    if exist([handles.path '\DelayInfo.txt'], 'file') == 2
+        delayInfo = handles.delayInfo;
+        x = cell(size((delayInfo(1,:))',1)+1,1);
+        for nn = 1:size((delayInfo(1,:))',1)
+            x(nn+1) = {num2str(delayInfo(1,nn))};
+        end
+        x(1) = {'all'};
+
+        set(handles.delayChoice, 'string', x);
+    else
+        set(handles.delayChoice, 'string', {'all'})
+        delayInfo = 0;
+    end
+    
+    if exist([handles.path '\polarizationInfo.txt'], 'file') == 2
+        polarInfo = handles.polarInfo;
+        x = cell(size((polarInfo(1,:))',1)+1,1);
+        for nn = 1:size((polarInfo(1,:))',1)
+            x(nn+1) = {num2str(polarInfo(1,nn))};
+        end
+        x(1) = {'all'};
+
+        set(handles.polarChoice, 'string', x);
+    else
+        set(handles.polarChoice, 'string', {'all'})
+        polarInfo = 0;
+    end
     
     clear loaded_data
     
@@ -2205,3 +2250,26 @@ function intensityChoice_Callback(hObject, eventdata, handles)
 
 % Hints: contents = cellstr(get(hObject,'String')) returns intensityChoice contents as cell array
 %        contents{get(hObject,'Value')} returns selected item from intensityChoice
+
+
+
+function chunksStartNum_Callback(hObject, eventdata, handles)
+% hObject    handle to chunksStartNum (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of chunksStartNum as text
+%        str2double(get(hObject,'String')) returns contents of chunksStartNum as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function chunksStartNum_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to chunksStartNum (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end

@@ -24,14 +24,14 @@ elseif paramChoice == 5
     condition = condition & (paramStatus == 4);
 end
 
-for nn = 1:length(polarInfo)
+for nn = 1:length(polarInfo(2,:))
     if polarChoice == nn+1
-        condition = condition & (polarizationStatus == polarInfo(nn));
+        condition = condition & (polarizationStatus == polarInfo(2,nn));
     end
 end
 
-for nn = 1:length(delayInfo)
+for nn = 1:length(delayInfo(2,:))
     if delayChoice == nn+1
-        condition = condition & (delayStatus == delayInfo(nn));
+        condition = condition & (delayStatus == delayInfo(2,nn));
     end
 end
