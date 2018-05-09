@@ -721,8 +721,8 @@ end
 cond = (tof(:, 1) > 50)&(tof(:, 2) > 50)&(tof(:, 3) > 50)&(tof(:, 4) > 50);
     
 cond = ApplyExperimentType(cond, shutterChoice, intensityChoice,...
-    paramChoice, polarChoice, delayChoice, handles.shutterStatusRaw, handles.intensityStatusRaw, handles.paramStatusRaw,...
-    handles.polarizationStatusRaw, handles.delayStatusRaw, handles.polarInfo, handles.delayInfo);
+    paramChoice, polarChoice, delayChoice, handles.shutterstatusRaw, handles.intensitystatusRaw, handles.paramstatusRaw,...
+    handles.polarizationstatusRaw, handles.delaystatusRaw, handles.polarInfo, handles.delayInfo);
 
 %load the file and then get the positions and tof
 tof = tof(cond, :);
@@ -940,15 +940,14 @@ pause(1)
 %get the necessary data from UI
 commonParams = get(handles.commonParams, 'data');
 prepareParams = get(handles.prepareParams, 'data');
-prepTimeEstimate = get(handles.prepTimeEst, 'value');
 saveData = get(handles.savePrepare, 'value');
 includePrepared = get(handles.includePrepared, 'value');
 loadCalib = get(handles.loadCalib, 'value');
 useBrokeData = get(handles.useBrokeData, 'value');
 
 %set length of ev array and theta array
-EVlength = 20;
-Thetalength = 20;
+EVlength = 100;
+Thetalength = 100;
 
 %get the necessary data from UI vectors
 x0 = commonParams(1);
@@ -1085,16 +1084,7 @@ if includePrepared
             set(handles.prepare, 'string', 'prepare');
             error('voltage values are unreasonable, V1 should be greater than 500 and VM should be less than -500')
         end
-    
-        if prepTimeEstimate
-
-            %estimate how long it will take to load file
-            estimatedTime = 0;
-
-            %For Vasily
-            
-        end
-        
+       
         [eVArray, thetaArray, tof_Sim, r_Sim] = makeSimArrays(V1, VM, ss, mass, charge, maxEV, EVlength, Thetalength);
         
         [handles.EV, handles.momZ, handles.momX, handles.momY, handles.hitNo, handles.shotNo,...
@@ -1156,14 +1146,6 @@ elseif useBrokeData
         error('voltage values are unreasonable, V1 should be greater than 500 and VM should be less than -500')
     end
     
-    if prepTimeEstimate
-
-        estimatedTime = 0;
-        set(handles.err, 'string', ['estimated completed prepare time: ' datestr(datetime('now')+seconds(estimatedTime))]);
-        drawnow
-        
-    end
-    
     %call the prepare function that will generate the momentum matrix that is requried
 
     handles.EV = [];
@@ -1185,10 +1167,13 @@ elseif useBrokeData
     
     [eVArray, thetaArray, tof_Sim, r_Sim] = makeSimArrays(V1, VM, ss, mass, charge, maxEV, EVlength, Thetalength);
     
+    tic
+    
     for nn = 1:numfiles
  
-        load([loadPath, loadFile, num2str(nn), '.mat']);
+        disp(['working on file number ' num2str(nn) ' of ' num2str(numfiles)])
         
+        load([loadPath, loadFile, num2str(nn), '.mat']);
         
         [EV, momZ, momX, momY, hitNo, shotNo, numHits_processed, ions_tof_processed,...
             ions_x_processed, ions_y_processed, shutterStatus, intensityStatus,...
@@ -1214,6 +1199,12 @@ elseif useBrokeData
         handles.paramStatus = [handles.paramStatus; paramStatus];
         handles.delayStatus = [handles.delayStatus; delayStatus];
     
+        estimatedTime = toc/nn*numfiles - toc;
+        
+        set(handles.err, 'string', ['estimated completed load time: '...
+        datestr(datetime('now')+seconds(estimatedTime))]);
+        drawnow
+        
     end
     
     handles.shotsStartZero = loaded_data.shotsStartZero;
@@ -1242,14 +1233,7 @@ else
         set(handles.prepare, 'string', 'prepare');
         error('voltage values are unreasonable, V1 should be greater than 500 and VM should be less than -500')
     end
-    
-    if prepTimeEstimate
 
-        estimatedTime = 0;
-        set(handles.err, 'string', ['estimated completed prepare time: ' datestr(datetime('now')+seconds(estimatedTime))]);
-        drawnow
-        
-    end
     %call the prepare function that will generate the momentum matrix that is requried
     
     [eVArray, thetaArray, tof_Sim, r_Sim] = makeSimArrays(V1, VM, ss, mass, charge, maxEV, EVlength, Thetalength);
@@ -1307,7 +1291,7 @@ end
 
 %reset the button string
 set(handles.prepare, 'string', 'prepare');
-
+toc
 %save any values saved to handles
 guidata(hObject, handles);
 
