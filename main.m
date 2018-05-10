@@ -946,7 +946,7 @@ loadCalib = get(handles.loadCalib, 'value');
 useBrokeData = get(handles.useBrokeData, 'value');
 
 %set length of ev array and theta array
-EVlength = 100;
+EVlength = 300;
 Thetalength = 100;
 
 %get the necessary data from UI vectors
