@@ -352,33 +352,23 @@ elseif strcmp(ext, '.mat')
     handles.delayInfo = loaded_data.delayInfo;
     handles.polarInfo = loaded_data.polarInfo;
     
-    if exist([handles.path '\DelayInfo.txt'], 'file') == 2
-        delayInfo = handles.delayInfo;
-        x = cell(size((delayInfo(1,:))',1)+1,1);
-        for nn = 1:size((delayInfo(1,:))',1)
-            x(nn+1) = {num2str(delayInfo(1,nn))};
-        end
-        x(1) = {'all'};
-
-        set(handles.delayChoice, 'string', x);
-    else
-        set(handles.delayChoice, 'string', {'all'})
-        delayInfo = 0;
+    delayInfo = handles.delayInfo;
+    x = cell(size((delayInfo(1,:))',1)+1,1);
+    for nn = 1:size((delayInfo(1,:))',1)
+        x(nn+1) = {num2str(delayInfo(1,nn))};
     end
+    x(1) = {'all'};
+
+    set(handles.delayChoice, 'string', x);
     
-    if exist([handles.path '\polarizationInfo.txt'], 'file') == 2
-        polarInfo = handles.polarInfo;
-        x = cell(size((polarInfo(1,:))',1)+1,1);
-        for nn = 1:size((polarInfo(1,:))',1)
-            x(nn+1) = {num2str(polarInfo(1,nn))};
-        end
-        x(1) = {'all'};
-
-        set(handles.polarChoice, 'string', x);
-    else
-        set(handles.polarChoice, 'string', {'all'})
-        polarInfo = 0;
+    polarInfo = handles.polarInfo;
+    x = cell(size((polarInfo(1,:))',1)+1,1);
+    for nn = 1:size((polarInfo(1,:))',1)
+        x(nn+1) = {num2str(polarInfo(1,nn))};
     end
+    x(1) = {'all'};
+
+    set(handles.polarChoice, 'string', x);
     
     clear loaded_data
     
@@ -1528,7 +1518,7 @@ for XX = 1:Textras
     %call the cutandplot function to make the necessary cuts and to plot
     %everything
 
-    cond = true(size(handles.closedshutter));
+    cond = true(size(handles.shutterStatus));
     
     shutterChoice = get(handles.shutterChoice, 'value');
     intensityChoice = get(handles.intensityChoice, 'value');
