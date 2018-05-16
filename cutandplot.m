@@ -241,17 +241,17 @@ end
 %plot histograms of the sum of momentum in each direction
 if plMomDir
 
-    [vals, bins] = hist((sum(momXOut.*repmat(incl, size(momXOut,1),1), 2)), numCutPlotBins);
+    [vals, bins] = hist(real(sum(momXOut.*repmat(incl, size(momXOut,1),1), 2)), numCutPlotBins);
     figure()
     plot(bins, vals)
     xlabel('x-momentum')
     
-    [vals, bins] = hist((sum(momYOut.*repmat(incl, size(momXOut,1),1), 2)), numCutPlotBins);
+    [vals, bins] = hist(real(sum(momYOut.*repmat(incl, size(momXOut,1),1), 2)), numCutPlotBins);
     figure()
     plot(bins, vals)
     xlabel('y-momentum')
     
-    [vals, bins] = hist((sum(momZOut.*repmat(incl, size(momXOut,1),1), 2)), numCutPlotBins);
+    [vals, bins] = hist(real(sum(momZOut.*repmat(incl, size(momXOut,1),1), 2)), numCutPlotBins);
     figure()
     plot(bins, vals)
     xlabel('z-momentum')

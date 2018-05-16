@@ -37,7 +37,7 @@ V1 <---> G <--------------> G <-----> VM
 
 % Edit the above text to modify the response to help main
 
-% Last Modified by GUIDE v2.5 15-Mar-2018 16:52:23
+% Last Modified by GUIDE v2.5 08-May-2018 11:26:35
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -76,6 +76,8 @@ function main_OpeningFcn(hObject, eventdata, handles, varargin)
 % Choose default command line output for main
 handles.output = hObject;
 
+set(handles.chunksStartNum, 'string', '0');
+
 % Update handles structure
 guidata(hObject, handles);
 
@@ -100,6 +102,9 @@ function loadfile_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 loadSave = get(handles.loadSave, 'value');
+breakUpData = get(handles.breakUpData, 'value');
+numChunks = get(handles.numEventTags, 'string');
+numChunks = str2double(numChunks);
 
 %set the error bar to no errors
 set(handles.err, 'string', 'please select a file, raw or pre-loaded');
@@ -118,7 +123,7 @@ filename = [handles.path file];
 [~, handles.datafile, ext] = fileparts(filename);
 
 if strcmp(ext, '.txt')
-
+    
     %estimate how long it will take to load file
     estimatedTime = 0;
 
@@ -138,63 +143,196 @@ if strcmp(ext, '.txt')
     drawnow
     
     %load the file and the other info required
-    rawdata = sparse(load(filename));
-    eventtags      = loadIfExists([handles.path '\eventtags.txt']);
-    closedshutter  = (loadIfExists([handles.path '\shutterclosed.txt'], ...
-                                          size(eventtags, 1)));
-    overlapstatus  = (loadIfExists([handles.path '\overlapstatus.txt'], ...
-                                          size(eventtags, 1)));
-    overlapstatus2 = (loadIfExists([handles.path '\overlapstatus2.txt'], ...
-                                          size(eventtags, 1)));
-    if(max(eventtags) > size(rawdata, 1))
-       warning('eventtags has mor events than data, eventtags reduced')
-       eventtags = eventtags( eventtags <= size(rawdata, 1) );
-       closedshutter = closedshutter( eventtags <= size(rawdata, 1) );
-       overlapstatus = overlapstatus( eventtags <= size(rawdata, 1) );
-       overlapstatus2 = overlapstatus2( eventtags <= size(rawdata, 1) );
+    if exist([handles.path '\DelayInfo.txt'], 'file') == 2
+        delayInfo = load([handles.path '\DelayInfo.txt']);
+        x = cell(size((delayInfo(1,:))',1)+1,1);
+        for nn = 1:size((delayInfo(1,:))',1)
+            x(nn+1) = {num2str(delayInfo(1,nn))};
+        end
+        x(1) = {'all'};
+
+        set(handles.delayChoice, 'string', x);
+    else
+        set(handles.delayChoice, 'string', {'all'})
+        delayInfo = 0;
     end
-        
-    %initialize the arrays for holding ion info
-    [numshots,maxions] = size(rawdata);
-    eventtags = [eventtags; numshots];
-    maxions = (maxions-2)/3;
-
-    ions_x = zeros(numshots, maxions);
-    ions_y = zeros(numshots, maxions);
-    ions_tof = sparse(numshots, maxions);
-
-    %save the info into respective arrays
-    handles.numHitsRaw = rawdata(:, 2);
-%    handles.HitNoRaw = rawdata(:, 1);
-
-    for nn = 1:maxions
-        ions_x(:, nn) = rawdata(:, 3*nn);
-        ions_y(:, nn) = rawdata(:, 3*nn+1);
-        ions_tof(:, nn) = rawdata(:, 3*nn+2);
-    end
-
-    handles.ions_x = ions_x;
-    handles.ions_y = ions_y;
-    handles.ions_tof = ions_tof;
-
-    toc
-    shutterRaw = nan(eventtags(length(eventtags)), 1);
-    overlapfullintensityRaw = nan(eventtags(length(eventtags)), 1);
-    overlaplowintensityRaw =nan(eventtags(length(eventtags)), 1);
     
-    toc
-        for nn = 1:length(eventtags)-1
-        shutterRaw((eventtags(nn) + 1):eventtags(nn + 1)) = ...
-            repmat(closedshutter(nn), (eventtags(nn+1)-eventtags(nn)), 1);
-        overlapfullintensityRaw((eventtags(nn) + 1):eventtags(nn + 1)) = ...
-            repmat(overlapstatus(nn), (eventtags(nn+1)-eventtags(nn)), 1);
-        overlaplowintensityRaw((eventtags(nn) + 1):eventtags(nn + 1)) = ...
-            repmat(overlapstatus2(nn), (eventtags(nn+1)-eventtags(nn)), 1);
-    end
+    if exist([handles.path '\polarizationInfo.txt'], 'file') == 2
+        polarInfo = loadIfExists([handles.path '\polarizationInfo.txt']);
+        x = cell(size((polarInfo(1,:))',1)+1,1);
+        for nn = 1:size((polarInfo(1,:))',1)
+            x(nn+1) = {num2str(polarInfo(1,nn))};
+        end
+        x(1) = {'all'};
 
-    handles.closedshutterRaw = sparse(shutterRaw);
-    handles.overlapfullintensityRaw = sparse(overlapfullintensityRaw);
-    handles.overlaplowintensityRaw = sparse(overlaplowintensityRaw);
+        set(handles.polarChoice, 'string', x);
+    else
+        set(handles.polarChoice, 'string', {'all'})
+        polarInfo = 0;
+    end
+    
+    eventtags = loadIfExists([handles.path '\eventtags.txt']);
+    shutterstatus = loadIfExists([handles.path '\shutterclosed.txt'], size(eventtags, 1));
+    delaystatus = loadIfExists([handles.path '\Delay.txt'], size(eventtags, 1));
+    polarizationstatus = loadIfExists([handles.path '\Polarization.txt'], size(eventtags, 1));
+    paramstatus = loadIfExists([handles.path '\ParamIndex.txt'], size(eventtags, 1));
+    intensitystatus = loadIfExists([handles.path '\Intensity.txt'], size(eventtags,1));
+    
+    if breakUpData
+        
+        chunksStartNum = str2double(get(handles.chunksStartNum, 'string'));
+        
+        timee = clock;
+        loadInfo = [date, '-', num2str(timee(4)), '-', num2str(timee(5)), '-', num2str(floor(timee(6))), '_'];
+        
+        rawDataStore = tabularTextDatastore(filename);
+        EventTagn = [eventtags; 10^10];
+        
+        loadSave = false;
+        
+        for mm = 1:floor((length(EventTagn)-1)/numChunks)
+
+            if hasdata(rawDataStore)
+            
+                rawDataStore.ReadSize = EventTagn(numChunks*mm+1)-EventTagn(numChunks*mm-(numChunks-1));
+                rawdata = table2array(read(rawDataStore));
+
+                %initialize the arrays for holding ion info
+                [numshots,maxions] = size(rawdata);
+                eventtags = [EventTagn(((mm-1)*numChunks+1):mm*numChunks)-EventTagn((mm-1)*numChunks+1); numshots];
+                maxions = (maxions-2)/3;
+                
+                desiredSize = rawDataStore.ReadSize;
+                
+                while (numshots ~= desiredSize) && hasdata(rawDataStore)
+                
+                    rawDataStore.ReadSize = rawDataStore.ReadSize - numshots;
+                    rawdata = [rawdata; table2array(read(rawDataStore))];
+                    
+                    [numshots, ~] = size(rawdata);
+                    
+                end
+
+                ions_x = zeros(numshots, maxions);
+                ions_y = zeros(numshots, maxions);
+                ions_tof = zeros(numshots, maxions);
+
+                %save the info into respective arrays
+                handles.numHitsRaw = rawdata(:, 2);
+
+                for nn = 1:maxions
+                    ions_x(:, nn) = rawdata(:, 3*nn);
+                    ions_y(:, nn) = rawdata(:, 3*nn+1);
+                    ions_tof(:, nn) = rawdata(:, 3*nn+2);
+                end
+
+                handles.ions_x = ions_x;
+                handles.ions_y = ions_y;
+                handles.ions_tof = ions_tof;
+
+                shutterstatusRaw = zeros(numshots, 1);
+                delaystatusRaw = zeros(numshots, 1);
+                polarizationstatusRaw = zeros(numshots, 1);
+                paramstatusRaw = zeros(numshots, 1);
+                intensitystatusRaw = zeros(numshots, 1);
+                
+                for nn = 1:length(eventtags)-1
+
+                    shutterstatusRaw((eventtags(nn) + 1):eventtags(nn + 1)) = ...
+                        repmat(shutterstatus(((mm-1)*numChunks+1)+nn-1), (eventtags(nn+1)-eventtags(nn)), 1);
+
+                    delaystatusRaw((eventtags(nn) + 1):eventtags(nn + 1)) = ...
+                        repmat(delaystatus(((mm-1)*numChunks+1)+nn-1), (eventtags(nn+1)-eventtags(nn)), 1);
+
+                    polarizationstatusRaw((eventtags(nn) + 1):eventtags(nn + 1)) = ...
+                        repmat(polarizationstatus(((mm-1)*numChunks+1)+nn-1), (eventtags(nn+1)-eventtags(nn)), 1);
+                    
+                    paramstatusRaw((eventtags(nn) + 1):eventtags(nn + 1)) = ...
+                        repmat(paramstatus(((mm-1)*numChunks+1)+nn-1), (eventtags(nn+1)-eventtags(nn)), 1);
+                    
+                    intensitystatusRaw((eventtags(nn) + 1):eventtags(nn + 1)) = ...
+                        repmat(intensitystatus(((mm-1)*numChunks+1)+nn-1), (eventtags(nn+1)-eventtags(nn)), 1);
+
+                end
+
+                handles.shutterstatusRaw = shutterstatusRaw;
+                handles.delaystatusRaw = delaystatusRaw;
+                handles.polarizationstatusRaw = polarizationstatusRaw;
+                handles.paramstatusRaw = paramstatusRaw;
+                handles.intensitystatusRaw = intensitystatusRaw;
+
+                loaded_data = struct('datafile', handles.datafile, 'path', handles.path,...
+                    'numHitsRaw', handles.numHitsRaw, 'ions_x', handles.ions_x,...
+                    'ions_y', handles.ions_y, 'ions_tof', handles.ions_tof,...
+                    'shutterstatusRaw', handles.shutterstatusRaw,...
+                    'delaystatusRaw', handles.delaystatusRaw,...
+                    'polarizationstatusRaw', handles.polarizationstatusRaw,...
+                    'paramstatusRaw', handles.paramstatusRaw,...
+                    'intensitystatusRaw', handles.intensitystatusRaw,...
+                    'shotsStartZero', EventTagn((mm-1)*numChunks+1)-1,...
+                    'delayInfo', delayInfo, 'polarInfo', polarInfo);
+
+                if ~exist([handles.path '\analysis\loadedData'], 'dir')
+                    mkdir([handles.path '\analysis\loadedData']);
+                    pause(1)
+                end
+
+                filename = [handles.datafile, '-loaded_data-', loadInfo, num2str(chunksStartNum+mm), '.mat'];
+                filename = fullfile([handles.path '\analysis\loadedData'], filename);
+
+                save(filename, 'loaded_data', '-v7.3');
+
+            end
+        end
+        
+    else
+        
+        rawdata = sparse(load(filename));
+        
+        %initialize the arrays for holding ion info
+        [numshots,maxions] = size(rawdata);
+        eventtags = [eventtags; numshots];
+        maxions = (maxions-2)/3;
+
+        ions_x = zeros(numshots, maxions);
+        ions_y = zeros(numshots, maxions);
+        ions_tof = sparse(numshots, maxions);
+
+        %save the info into respective arrays
+        handles.numHitsRaw = rawdata(:, 2);
+
+        for nn = 1:maxions
+            ions_x(:, nn) = rawdata(:, 3*nn);
+            ions_y(:, nn) = rawdata(:, 3*nn+1);
+            ions_tof(:, nn) = rawdata(:, 3*nn+2);
+        end
+
+        handles.ions_x = ions_x;
+        handles.ions_y = ions_y;
+        handles.ions_tof = ions_tof;
+
+        shutterstatusRaw = nan(eventtags(length(eventtags)), 1);
+        delaystatusRaw = nan(eventtags(length(eventtags)), 1);
+        polarizationstatusRaw = nan(eventtags(length(eventtags)), 1);
+        paramstatusRaw = nan(eventtags(length(eventtags)), 1);
+
+        for nn = 1:length(eventtags)-1
+            shutterstatusRaw((eventtags(nn) + 1):eventtags(nn + 1)) = ...
+                repmat(shutterstatus(nn), (eventtags(nn+1)-eventtags(nn)), 1);
+            delaystatusRaw((eventtags(nn) + 1):eventtags(nn + 1)) = ...
+                repmat(delaystatus(nn), (eventtags(nn+1)-eventtags(nn)), 1);
+            polarizationstatusRaw((eventtags(nn) + 1):eventtags(nn + 1)) = ...
+                repmat(polarizationstatus(nn), (eventtags(nn+1)-eventtags(nn)), 1);
+            paramstatusRaw((eventtags(nn) + 1):eventtags(nn + 1)) = ...
+                repmat(polarizationstatus(nn), (eventtags(nn+1)-eventtags(nn)), 1);
+        end
+
+        handles.shutterstatusRaw = sparse(shutterstatusRaw);
+        handles.delaystatusRaw = sparse(delaystatusRaw);
+        handles.polarizationstatusRaw = sparse(polarizationstatusRaw);
+        handles.paramstatusRaw = sparse(paramstatusRaw);
+        
+    end
     
 elseif strcmp(ext, '.mat')
     
@@ -203,13 +341,34 @@ elseif strcmp(ext, '.mat')
     handles.datafile = loaded_data.datafile;
     handles.path = loaded_data.path;
     handles.numHitsRaw = loaded_data.numHitsRaw;
-%    handles.HitNoRaw = loaded_data.HitNoRaw;
     handles.ions_x = loaded_data.ions_x;
     handles.ions_y = loaded_data.ions_y;
     handles.ions_tof = loaded_data.ions_tof;
-    handles.closedshutterRaw = loaded_data.closedshutterRaw;
-    handles.overlapfullintensityRaw = loaded_data.overlapfullintensityRaw;
-    handles.overlaplowintensityRaw = loaded_data.overlaplowintensityRaw;
+    handles.shutterstatusRaw = loaded_data.shutterstatusRaw;
+    handles.delaystatusRaw = loaded_data.delaystatusRaw;
+    handles.polarizationstatusRaw = loaded_data.polarizationstatusRaw;
+    handles.paramstatusRaw = loaded_data.paramstatusRaw;
+    handles.intensitystatusRaw = loaded_data.intensitystatusRaw;
+    handles.delayInfo = loaded_data.delayInfo;
+    handles.polarInfo = loaded_data.polarInfo;
+    
+    delayInfo = handles.delayInfo;
+    x = cell(size((delayInfo(1,:))',1)+1,1);
+    for nn = 1:size((delayInfo(1,:))',1)
+        x(nn+1) = {num2str(delayInfo(1,nn))};
+    end
+    x(1) = {'all'};
+
+    set(handles.delayChoice, 'string', x);
+    
+    polarInfo = handles.polarInfo;
+    x = cell(size((polarInfo(1,:))',1)+1,1);
+    for nn = 1:size((polarInfo(1,:))',1)
+        x(nn+1) = {num2str(polarInfo(1,nn))};
+    end
+    x(1) = {'all'};
+
+    set(handles.polarChoice, 'string', x);
     
     clear loaded_data
     
@@ -223,10 +382,11 @@ end
 if loadSave
     loaded_data = struct('datafile', handles.datafile, 'path', handles.path,...
         'numHitsRaw', handles.numHitsRaw, ... %  'HitNoRaw', handles.HitNoRaw,...
-        'ions_x', handles.ions_x,...
-        'ions_y', handles.ions_y, 'ions_tof', handles.ions_tof, 'closedshutterRaw', handles.closedshutterRaw,...
-        'overlapfullintensityRaw', handles.overlapfullintensityRaw, 'overlaplowintensityRaw',...
-        handles.overlaplowintensityRaw);
+        'ions_x', handles.ions_x, 'ions_y', handles.ions_y,...
+        'ions_tof', handles.ions_tof, 'closedshutterRaw', handles.shutterstatusRaw,...
+        'chosenDelayRaw', handles.delaystatusRaw, 'chosenPolarizationRaw',...
+        handles.polarizationstatusRaw, 'chosenParamRaw', handles.paramstatusRaw,...
+        'delayInfo', delayInfo, 'polarInfo', polarInfo);
 
     if ~exist([handles.path '\analysis'], 'dir')
         mkdir([handles.path '\analysis']);
@@ -241,10 +401,11 @@ if loadSave
     save(filename, 'loaded_data', '-v7.3');
 
 end
-    
 
 %save any values saved to handles
 guidata(hObject, handles);
+
+clearvars -except handles
 
 set(handles.loadfile, 'string', 'load');
 
@@ -321,17 +482,22 @@ drawnow
 tofNumBins = str2double(get(handles.tofNumBins, 'string'));
 t0 = get(handles.commonParams, 'data');
 saveCalib = get(handles.saveCalib, 'value');
-shutter = get(handles.shutter, 'value');
-intensity = get(handles.intensity, 'value');
+shutterChoice = get(handles.shutterChoice, 'value');
+intensityChoice = get(handles.intensityChoice, 'value');
+polarChoice = get(handles.polarChoice, 'value');
+paramChoice = get(handles.paramChoice, 'value');
+delayChoice = get(handles.delayChoice, 'value');
 calibPoints = get(handles.calibPoints, 'data');
 
 %get the data
 tof = handles.ions_tof;
 rX = handles.ions_x;
 rY = handles.ions_y;
-closedshutter = handles.closedshutterRaw;
-full = handles.overlapfullintensityRaw;
-low = handles.overlaplowintensityRaw;
+shutterstatusRaw = handles.shutterstatusRaw;
+delaystatusRaw = handles.delaystatusRaw;
+polarizationstatusRaw = handles.polarizationstatusRaw;
+paramstatusRaw = handles.paramstatusRaw;
+intensitystatusRaw = handles.intensitystatusRaw;
 
 %get the necessary data from UI vectors
 x0 = t0(1);
@@ -357,60 +523,23 @@ elseif prod(isnan(calibTofMin))||prod(isnan(calibTofMax))
     error('Tof Min or Tof Max is not a number');
 end
 
-%set conditions for shutter and intensity settings
-
-[~, maxions] = size(tof);
-% closedshutter = repmat(closedshutter, 1, maxions);
-% closedshutter = (closedshutter)';
-% closedshutter = closedshutter(:);
-% 
-% full = repmat(full, 1, maxions);
-% full = (full)';
-% full = full(:);
-% 
-% low = repmat(low, 1, maxions);
-% low = (low)';
-% low = low(:);
+%set conditions for shutterChoice and paramChoice settings
 
 cond = (tof(:, 1) > 50)&(tof(:, 2) > 50);
-if (shutter == 1 && intensity == 1)
-    cond = cond & closedshutter & ~full & ~low;
-elseif (shutter == 1 && intensity == 2)
-    cond = cond & closedshutter & full;
-elseif (shutter == 1 && intensity == 3)
-    cond = cond & closedshutter & low;
-elseif (shutter == 1 && intensity == 4)
-    cond = cond & closedshutter;
-elseif (shutter == 2 && intensity == 1)
-    cond = cond & ~closedshutter & ~full & ~low;
-elseif (shutter == 2 && intensity == 2)
-    cond = cond & ~closedshutter & full;
-elseif (shutter == 2 && intensity == 3)
-    cond = cond & ~closedshutter & low;
-elseif (shutter == 2 && intensity == 4)
-    cond = cond & ~closedshutter;
-elseif (shutter == 3 && intensity == 1)
-    cond = cond & ~full & ~low;
-elseif (shutter == 3 && intensity == 2)
-    cond = cond & full;
-elseif (shutter == 3 && intensity == 3)
-    cond = cond & overlaplowintensity;
-elseif (shutter == 3 && intensity == 4)
-
-end
+cond = ApplyExperimentType(cond, shutterChoice, intensityChoice,...
+    paramChoice, polarChoice, delayChoice, shutterstatusRaw, intensitystatusRaw, paramstatusRaw,...
+    polarizationstatusRaw, delaystatusRaw, handles.polarInfo, handles.delayInfo);
 
 %plot PIPICO
-if(get(handles.plot_t1vst2, 'value'))
-    if (t0 ~= 1)&&(t0 ~= 0)&& ~(isnan(t0))
-        figure()
-        plot(tof(cond, 1)-t0, tof(cond, 2)-t0, '.')
-    else
-        figure()
-        plot(tof(cond, 1), tof(cond, 2), '.')
-    end
-    xlabel('tof 1st (ns)')
-    ylabel('tof 2nd (ns)')
+if (t0 ~= 1)&&(t0 ~= 0)&& ~(isnan(t0))
+    figure()
+    plot(tof(cond, 1)-t0, tof(cond, 2)-t0, '.')
+else
+    figure()
+    plot(tof(cond, 1), tof(cond, 2), '.')
 end
+xlabel('tof 1st (ns)')
+ylabel('tof 2nd (ns)')
 
 %apply the conditions
 tof = tof(cond, :);
@@ -427,67 +556,46 @@ tof = tof(tof ~= 0);
 
 
 %plot histograms of tof, x position, and y position
-if(get(handles.plot_xy, 'value'))
-    if (x0 ~= 1)&&~(isnan(x0))
-        rX = rX-x0;
-        [values, bins] = hist(rX, tofNumBins);
-
-        figure()
-        plot(bins, values)
-        hold on
-    else
-        [values, bins] = hist(rX, tofNumBins);
-
-        figure()
-        plot(bins, values)
-        hold on
-    end
-    xlabel('x (mm)')
-    title(['number of hits ' num2str(numel(tof))])
-
-    if (y0 ~= 1)&&~(isnan(y0))
-        rY = rY-y0;
-        [values, bins] = hist(rY, tofNumBins);
-
-        figure()
-        plot(bins, values)
-        hold on
-    else
-        [values, bins] = hist(rY, tofNumBins);
-
-        figure()
-        plot(bins, values)
-        hold on
-    end
-    xlabel('y (mm)')
-    title(['number of hits ' num2str(numel(tof))])
-end
+if (x0 ~= 1)&&~(isnan(x0))
+    rX = rX-x0;
+    [values, bins] = hist(rX, tofNumBins);
     
+    figure()
+    plot(bins, values)
+    hold on
+else
+    [values, bins] = hist(rX, tofNumBins);
+    
+    figure()
+    plot(bins, values)
+    hold on
+end
+xlabel('x (mm)')
+title(['number of hits ' num2str(numel(tof))])
+
+if (y0 ~= 1)&&~(isnan(y0))
+    rY = rY-y0;
+    [values, bins] = hist(rY, tofNumBins);
+    
+    figure()
+    plot(bins, values)
+    hold on
+else
+    [values, bins] = hist(rY, tofNumBins);
+    
+    figure()
+    plot(bins, values)
+    hold on
+end
+xlabel('y (mm)')
+title(['number of hits ' num2str(numel(tof))])
+
 if (t0 ~= 1)&&~(isnan(t0))
     tof = tof-t0;
     [values, bins] = hist(tof, tofNumBins);
 else
     [values, bins] = hist(tof, tofNumBins);
 end
-
-% figure()
-% plot((bins - 71.62718).^2*(3.741E-6), values)
-% xlabel('M/Z')
-% title(['number of hits ' num2str(numel(tof))])
-
-% values_all = [];
-% figure()
-% valuestoplot = (handles.ions_tof - 71.62718).^2*(3.741E-6);
-% bins_mass = -2:0.25:45;
-% n = 10;
-% for i = 1:n
-%     current_values = valuestoplot(round(size(valuestoplot, 1)*(i-1)/n + 1):round(size(valuestoplot, 1)*i/n),:);
-%     [values, bins_mass] =  hist(current_values(:), bins_mass);
-%     plot(bins_mass, values , 'color', [(i-1)/(n-1), 0, (n-i)/(n-1)] );
-%     hold on;
-%     values_all = [values_all, values'];
-% end
-% hold off
 
 figure()
 plot(bins, values)
@@ -560,8 +668,11 @@ pause(1)
 commonParams = get(handles.commonParams, 'data');
 saveCalib = get(handles.saveCalib, 'value');
 calibPoints = get(handles.calibPoints, 'data');
-shutter = get(handles.shutter, 'value');
-intensity = get(handles.intensity, 'value');
+shutterChoice = get(handles.shutterChoice, 'value');
+intensityChoice = get(handles.intensityChoice, 'value');
+polarChoice = get(handles.polarChoice, 'value');
+paramChoice = get(handles.paramChoice, 'value');
+delayChoice = get(handles.delayChoice, 'value');
 
 %get the data
 tof = handles.ions_tof;
@@ -599,31 +710,9 @@ end
 %set conditions
 cond = (tof(:, 1) > 50)&(tof(:, 2) > 50)&(tof(:, 3) > 50)&(tof(:, 4) > 50);
     
-if (shutter == 1 && intensity == 1)
-    cond = cond & handles.closedshutter & ~handles.overlapfullintensity & ~handles.overlaplowintensity;
-elseif (shutter == 1 && intensity == 2)
-    cond = cond & handles.closedshutter & handles.overlapfullintensity;
-elseif (shutter == 1 && intensity == 3)
-    cond = cond & handles.closedshutter & handles.overlaplowintensity;
-elseif (shutter == 1 && intensity == 4)
-    cond = cond & handles.closedshutter;
-elseif (shutter == 2 && intensity == 1)
-    cond = cond & ~handles.closedshutter & ~handles.overlapfullintensity & ~handles.overlaplowintensity;
-elseif (shutter == 2 && intensity == 2)
-    cond = cond & ~handles.closedshutter & handles.overlapfullintensity;
-elseif (shutter == 2 && intensity == 3)
-    cond = cond & ~handles.closedshutter & handles.overlaplowintensity;
-elseif (shutter == 2 && intensity == 4)
-    cond = cond & ~handles.closedshutter;
-elseif (shutter == 3 && intensity == 1)
-    cond = cond & ~handles.overlapfullintensity & ~handles.overlaplowintensity;
-elseif (shutter == 3 && intensity == 2)
-    cond = cond & handles.overlapfullintensity;
-elseif (shutter == 3 && intensity == 3)
-    cond = cond & handles.overlaplowintensity;
-elseif (shutter == 3 && intensity == 4)
-
-end
+cond = ApplyExperimentType(cond, shutterChoice, intensityChoice,...
+    paramChoice, polarChoice, delayChoice, handles.shutterstatusRaw, handles.intensitystatusRaw, handles.paramstatusRaw,...
+    handles.polarizationstatusRaw, handles.delaystatusRaw, handles.polarInfo, handles.delayInfo);
 
 %load the file and then get the positions and tof
 tof = tof(cond, :);
@@ -646,7 +735,6 @@ if y0 == 1
 end
 
 tofNumBins = str2double(get(handles.tofNumBins, 'string'));
-
 figure();
 hist(rX - x0, tofNumBins);
 hold on;
@@ -842,14 +930,14 @@ pause(1)
 %get the necessary data from UI
 commonParams = get(handles.commonParams, 'data');
 prepareParams = get(handles.prepareParams, 'data');
-prepTimeEstimate = get(handles.prepTimeEst, 'value');
 saveData = get(handles.savePrepare, 'value');
 includePrepared = get(handles.includePrepared, 'value');
 loadCalib = get(handles.loadCalib, 'value');
+useBrokeData = get(handles.useBrokeData, 'value');
 
 %set length of ev array and theta array
-EVlength = 20;
-Thetalength = 20;
+EVlength = 300;
+Thetalength = 100;
 
 %get the necessary data from UI vectors
 x0 = commonParams(1);
@@ -908,6 +996,11 @@ end
 
 if includePrepared
 
+    if useBrokeData
+        set(handles.err, 'string', 'you cannot include previously prepared data with broken up data')
+        error('you cannot include previously prepared data with broken up data')
+    end
+    
     set(handles.err, 'string', 'please select your prepared file');
     
     if exist('handles', 'var') && isfield(handles, 'path')
@@ -948,9 +1041,14 @@ if includePrepared
         handles.ions_tof_processed = prepared.ions_tof_processed;
         handles.ions_x_processed = prepared.ions_x_processed;
         handles.ions_y_processed = prepared.ions_y_processed;
-        handles.closedshutter = prepared.closedshutter;
-        handles.overlapfullintensity = prepared.overlapfullintensity;
-        handles.overlaplowintensity = prepared.overlaplowintensity;
+        handles.shutterStatus = prepared.shutterStatus;
+        handles.intensityStatus = prepared.intensityStatus;
+        handles.polarizationStatus = prepared.polarizationStatus;
+        handles.paramStatus = prepared.paramStatus;
+        handles.delayStatus = prepared.delayStatus;
+        handles.shotsStartZero = 0;
+        handles.polarInfo = prepared.polarInfo;
+        handles.delayInfo = prepared.delayInfo;
         handles.datafile = prepared.datafile;
         handles.path = prepared.path;
         
@@ -976,22 +1074,16 @@ if includePrepared
             set(handles.prepare, 'string', 'prepare');
             error('voltage values are unreasonable, V1 should be greater than 500 and VM should be less than -500')
         end
-    
-        if prepTimeEstimate
-
-            %estimate how long it will take to load file
-            estimatedTime = 0;
-
-            %For Vasily
-            
-        end
+       
+        [eVArray, thetaArray, tof_Sim, r_Sim] = makeSimArrays(V1, VM, ss, mass, charge, maxEV, EVlength, Thetalength);
         
         [handles.EV, handles.momZ, handles.momX, handles.momY, handles.hitNo, handles.shotNo,...
         handles.numHits_processed, handles.ions_tof_processed, handles.ions_x_processed, handles.ions_y_processed,...
-        handles.closedshutter, handles.overlapfullintensity, handles.overlaplowintensity] =...
+        handles.shutterStatus, handles.intensityStatus, handles.polarizationStatus, handles.paramStatus, handles.delayStatus] =...
         prepare(V1, VM, ss, t0, x0, y0, notincluded(:, 1), notincluded(:, 2), notincluded(:, 3), handles.ions_tof,...
-        handles.ions_x, handles.ions_y, handles.numHitsRaw, EVlength, Thetalength,...
-        handles.closedshutterRaw, handles.overlapfullintensityRaw, handles.overlaplowintensityRaw);
+        handles.ions_x, handles.ions_y, handles.numHitsRaw, eVArray, thetaArray, tof_Sim, r_Sim,...
+        handles.shutterstatusRaw, handles.intensityStatusRaw, handles.polarizationStatusRaw,...
+        handles.paramStatusRaw, handles.delayStatusRaw, 0);
         
         handles.EV = [handles.EV, prepared.EV(:, preparedIndex)];
         handles.momZ = [handles.momZ, prepared.momZ(:, preparedIndex)];
@@ -1003,12 +1095,111 @@ if includePrepared
         maxEV = [notincluded(:, 3), prepared.maxEV(preparedIndex)];
 
         prepareParams = zeros(size(handles.prepareParams));
-        prepareParams([1,2,3], linspace(1,length(mass),length(mass))) = [mass;charge;maxEV]
+        prepareParams([1,2,3], linspace(1,length(mass),length(mass))) = [mass;charge;maxEV];
         set(handles.prepareParams, 'data', prepareParams)
         
     end
     
     clear prepared
+    
+elseif useBrokeData
+
+    set(handles.err, 'string', 'please select one loaded file');
+    
+    if exist('handles', 'var') && isfield(handles, 'path')
+        [loadFile, loadPath] = uigetfile(handles.path);
+    else
+        [loadFile, loadPath] = uigetfile();
+        handles.path = loadPath;
+    end
+    
+    set(handles.err, 'string', 'no errors');
+    
+    loadFile = loadFile(1:end-5);
+    handles.datafile = loadFile;
+    
+    numfiles = dir([loadPath, '\*.mat']);
+    numfiles = length(numfiles);
+
+    %take care of default values
+    if x0 == 1, x0 = 0; end
+    if y0 == 1, y0 = 0; end
+    if t0 == 1, t0 = 0; end
+    if V1 == 1, V1 = 2000; end
+    if VM == 1, VM = -2250; end
+    if ss == 1, ss = 40.5; end
+
+    if V1 < 500 || VM > -500 && (V1 ~= 1) && (VM ~= 1)
+        set(handles.err, 'string',...
+            'voltage values are unreasonable, V1 should be greater than 500 and VM should be less than -500');
+        set(handles.prepare, 'string', 'prepare');
+        error('voltage values are unreasonable, V1 should be greater than 500 and VM should be less than -500')
+    end
+    
+    %call the prepare function that will generate the momentum matrix that is requried
+
+    handles.EV = [];
+    handles.momZ = [];
+    handles.momX = [];
+    handles.momY = [];
+    handles.hitNo = [];
+    handles.shotNo = [];
+    handles.numHits_processed = [];
+    handles.ions_tof_processed = [];
+    handles.ions_x_processed = [];
+    handles.ions_y_processed = [];
+    handles.shutterStatus = [];
+    handles.intensityStatus = [];
+    handles.polarizationStatus = [];
+    handles.paramStatus = [];
+    handles.delayStatus = [];
+    
+    
+    [eVArray, thetaArray, tof_Sim, r_Sim] = makeSimArrays(V1, VM, ss, mass, charge, maxEV, EVlength, Thetalength);
+    
+    tic
+    
+    for nn = 1:numfiles
+ 
+        disp(['working on file number ' num2str(nn) ' of ' num2str(numfiles)])
+        
+        load([loadPath, loadFile, num2str(nn), '.mat']);
+        
+        [EV, momZ, momX, momY, hitNo, shotNo, numHits_processed, ions_tof_processed,...
+            ions_x_processed, ions_y_processed, shutterStatus, intensityStatus,...
+            polarizationStatus, paramStatus, delayStatus] =...
+            prepare(V1, VM, ss, t0, x0, y0, mass, charge, maxEV, loaded_data.ions_tof, loaded_data.ions_x,...
+            loaded_data.ions_y, loaded_data.numHitsRaw, eVArray, thetaArray, tof_Sim, r_Sim,...
+            loaded_data.shutterstatusRaw, loaded_data.intensitystatusRaw, loaded_data.polarizationstatusRaw,...
+            loaded_data.paramstatusRaw, loaded_data.delaystatusRaw, loaded_data.shotsStartZero);
+        
+        handles.EV = [handles.EV; EV];
+        handles.momZ = [handles.momZ; momZ];
+        handles.momX = [handles.momX; momX];
+        handles.momY = [handles.momY; momY];
+        handles.hitNo = [handles.hitNo; hitNo];
+        handles.shotNo = [handles.shotNo; shotNo];
+        handles.numHits_processed = [handles.numHits_processed; numHits_processed];
+        handles.ions_tof_processed = [handles.ions_tof_processed; ions_tof_processed];
+        handles.ions_x_processed = [handles.ions_x_processed; ions_x_processed];
+        handles.ions_y_processed = [handles.ions_y_processed; ions_y_processed];
+        handles.shutterStatus = [handles.shutterStatus; shutterStatus];
+        handles.intensityStatus = [handles.intensityStatus; intensityStatus];
+        handles.polarizationStatus = [handles.polarizationStatus; polarizationStatus];
+        handles.paramStatus = [handles.paramStatus; paramStatus];
+        handles.delayStatus = [handles.delayStatus; delayStatus];
+    
+        estimatedTime = toc/nn*numfiles - toc;
+        
+        set(handles.err, 'string', ['estimated completed load time: '...
+        datestr(datetime('now')+seconds(estimatedTime))]);
+        drawnow
+        
+    end
+    
+    handles.shotsStartZero = loaded_data.shotsStartZero;
+    handles.polarInfo = loaded_data.polarInfo;
+    handles.delayInfo = loaded_data.delayInfo;
     
 else
     
@@ -1032,29 +1223,20 @@ else
         set(handles.prepare, 'string', 'prepare');
         error('voltage values are unreasonable, V1 should be greater than 500 and VM should be less than -500')
     end
-    
-    if prepTimeEstimate
 
-        %estimate how long it will take to load file
-        %VASILY this region is for you
-        
-        estimatedTime = 0;
-        set(handles.err, 'string', ['estimated completed prepare time: ' datestr(datetime('now')+seconds(estimatedTime))]);
-        drawnow
-        
-    end
-    %call the prepare function that will generate the momentum matrix that is
-    %requried
-%     [handles.EV, handles.momZ, handles.momX, handles.momY] =...
-%         prepare2(V1, VM, ss, t0, x0, y0, mass, charge, maxEV, handles.ions_tof, handles.ions_x,...
-%                  handles.ions_y, handles.numHitsRaw, EVlength, Thetalength);
+    %call the prepare function that will generate the momentum matrix that is requried
+    
+    [eVArray, thetaArray, tof_Sim, r_Sim] = makeSimArrays(V1, VM, ss, mass, charge, maxEV, EVlength, Thetalength);
     
     [handles.EV, handles.momZ, handles.momX, handles.momY, handles.hitNo, handles.shotNo,...
-     handles.numHits_processed, handles.ions_tof_processed, handles.ions_x_processed, handles.ions_y_processed,...
-     handles.closedshutter, handles.overlapfullintensity, handles.overlaplowintensity] =...
+        handles.numHits_processed, handles.ions_tof_processed, handles.ions_x_processed, handles.ions_y_processed,...
+        handles.shutterStatus, handles.intensityStatus, handles.polarizationStatus,...
+        handles.paramStatus, handles.delayStatus] =...
         prepare(V1, VM, ss, t0, x0, y0, mass, charge, maxEV, handles.ions_tof, handles.ions_x,...
-                handles.ions_y, handles.numHitsRaw, EVlength, Thetalength,...
-                handles.closedshutterRaw, handles.overlapfullintensityRaw, handles.overlaplowintensityRaw);
+        handles.ions_y, handles.numHitsRaw, eVArray, thetaArray, tof_Sim, r_Sim,...
+        handles.shutterstatusRaw, handles.intensitystatusRaw, handles.polarizationstatusRaw,...
+        handles.paramStatusRaw, handles.delayStatusRaw, 0);
+
 end
 
 if saveData
@@ -1080,21 +1262,26 @@ if saveData
     prepared.ions_tof_processed = handles.ions_tof_processed;
     prepared.ions_x_processed = handles.ions_x_processed;
     prepared.ions_y_processed = handles.ions_y_processed;
-    prepared.closedshutter = handles.closedshutter;
-    prepared.overlapfullintensity = handles.overlapfullintensity;
-    prepared.overlaplowintensity = handles.overlaplowintensity;
+    prepared.shutterStatus = handles.shutterStatus;
+    prepared.intensityStatus = handles.intensityStatus;
+    prepared.polarizationStatus = handles.polarizationStatus;
+    prepared.paramStatus = handles.paramStatus;
+    prepared.delayStatus = handles.delayStatus;
+    prepared.shotsStartZero = handles.shotsStartZero;
+    prepared.polarInfo = handles.polarInfo;
+    prepared.delayInfo = handles.delayInfo;
     prepared.mass = mass;
     prepared.charge = charge;
     prepared.maxEV = maxEV;
     prepared.datafile = handles.datafile;
     prepared.path = handles.path;
-    %}
+
     save(filename, 'prepared', '-v7.3');
 end
 
 %reset the button string
 set(handles.prepare, 'string', 'prepare');
-
+toc
 %save any values saved to handles
 guidata(hObject, handles);
 
@@ -1331,36 +1518,17 @@ for XX = 1:Textras
     %call the cutandplot function to make the necessary cuts and to plot
     %everything
 
-    cond = true(size(handles.closedshutter));
+    cond = true(size(handles.shutterStatus));
     
-    shutter = get(handles.shutter, 'value');
-    intensity = get(handles.intensity, 'value');
+    shutterChoice = get(handles.shutterChoice, 'value');
+    intensityChoice = get(handles.intensityChoice, 'value');
+    paramChoice = get(handles.paramChoice, 'value');
+    polarChoice = get(handles.polarChoice, 'value');
+    delayChoice = get(handles.delayChoice, 'value');
     
-    if (shutter == 1 && intensity == 1)
-        cond = cond & handles.closedshutter & ~handles.overlapfullintensity & ~handles.overlaplowintensity;
-    elseif (shutter == 1 && intensity == 2)
-        cond = cond & handles.closedshutter & handles.overlapfullintensity;
-    elseif (shutter == 1 && intensity == 3)
-        cond = cond & handles.closedshutter & handles.overlaplowintensity;
-    elseif (shutter == 1 && intensity == 4)
-        cond = cond & handles.closedshutter;
-    elseif (shutter == 2 && intensity == 1)
-        cond = cond & ~handles.closedshutter & ~handles.overlapfullintensity & ~handles.overlaplowintensity;
-    elseif (shutter == 2 && intensity == 2)
-        cond = cond & ~handles.closedshutter & handles.overlapfullintensity;
-    elseif (shutter == 2 && intensity == 3)
-        cond = cond & ~handles.closedshutter & handles.overlaplowintensity;
-    elseif (shutter == 2 && intensity == 4)
-        cond = cond & ~handles.closedshutter;
-    elseif (shutter == 3 && intensity == 1)
-        cond = cond & ~handles.overlapfullintensity & ~handles.overlaplowintensity;
-    elseif (shutter == 3 && intensity == 2)
-        cond = cond & handles.overlapfullintensity;
-    elseif (shutter == 3 && intensity == 3)
-        cond = cond & handles.overlaplowintensity;
-    elseif (shutter == 3 && intensity == 4)
-        
-    end
+    cond = ApplyExperimentType(cond, shutterChoice, intensityChoice,...
+        paramChoice, polarChoice, delayChoice, handles.shutterStatus, handles.intensityStatus, handles.paramStatus,...
+        handles.polarizationStatus, handles.delayStatus, handles.polarInfo, handles.delayInfo);
         
     [output] = cutandplot(mass, charge, colms, handles.momX(cond, :), handles.momY(cond, :),...
         handles.momZ(cond, :), handles.EV(cond, :), handles.ions_tof_processed(cond),...
@@ -1850,25 +2018,25 @@ function shutter1_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 % Hint: get(hObject,'Value') returns toggle state of shutter1
 
-% --- Executes on selection change in intensity.
-function intensity_Callback(hObject, eventdata, handles)
-% hObject    handle to intensity (see GCBO)
+% --- Executes on selection change in paramChoice.
+function paramChoice_Callback(hObject, eventdata, handles)
+% hObject    handle to paramChoice (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-% Hints: contents = cellstr(get(hObject,'String')) returns intensity contents as cell array
-%        contents{get(hObject,'Value')} returns selected item from intensity
+% Hints: contents = cellstr(get(hObject,'String')) returns paramChoice contents as cell array
+%        contents{get(hObject,'Value')} returns selected item from paramChoice
 
-% --- Executes on selection change in shutter.
-function shutter_Callback(hObject, eventdata, handles)
-% hObject    handle to shutter (see GCBO)
+% --- Executes on selection change in shutterChoice.
+function shutterChoice_Callback(hObject, eventdata, handles)
+% hObject    handle to shutterChoice (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-% Hints: contents = cellstr(get(hObject,'String')) returns shutter contents as cell array
-%        contents{get(hObject,'Value')} returns selected item from shutter
+% Hints: contents = cellstr(get(hObject,'String')) returns shutterChoice contents as cell array
+%        contents{get(hObject,'Value')} returns selected item from shutterChoice
 
 % --- Executes during object creation, after setting all properties.
-function shutter_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to shutter (see GCBO)
+function shutterChoice_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to shutterChoice (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    empty - handles not created until after all CreateFcns called
 
@@ -1954,19 +2122,134 @@ function loadCalib_Callback(hObject, eventdata, handles)
 % Hint: get(hObject,'Value') returns toggle state of loadCalib
 
 
-% --- Executes on button press in plot_t1vst2.
-function plot_t1vst2_Callback(hObject, eventdata, handles)
-% hObject    handle to plot_t1vst2 (see GCBO)
+% --- Executes on button press in breakUpData.
+function breakUpData_Callback(hObject, eventdata, handles)
+% hObject    handle to breakUpData (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-% Hint: get(hObject,'Value') returns toggle state of plot_t1vst2
+% Hint: get(hObject,'Value') returns toggle state of breakUpData
 
 
-% --- Executes on button press in plot_xy.
-function plot_xy_Callback(hObject, eventdata, handles)
-% hObject    handle to plot_xy (see GCBO)
+
+function numEventTags_Callback(hObject, eventdata, handles)
+% hObject    handle to numEventTags (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-% Hint: get(hObject,'Value') returns toggle state of plot_xy
+% Hints: get(hObject,'String') returns contents of numEventTags as text
+%        str2double(get(hObject,'String')) returns contents of numEventTags as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function numEventTags_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to numEventTags (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in useBrokeData.
+function useBrokeData_Callback(hObject, eventdata, handles)
+% hObject    handle to useBrokeData (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of useBrokeData
+
+
+% --- Executes during object creation, after setting all properties.
+function intensityChoice_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to intensityChoice (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: popupmenu controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on selection change in delayChoice.
+function delayChoice_Callback(hObject, eventdata, handles)
+% hObject    handle to delayChoice (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: contents = cellstr(get(hObject,'String')) returns delayChoice contents as cell array
+%        contents{get(hObject,'Value')} returns selected item from delayChoice
+
+
+% --- Executes during object creation, after setting all properties.
+function delayChoice_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to delayChoice (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: popupmenu controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on selection change in polarChoice.
+function polarChoice_Callback(hObject, eventdata, handles)
+% hObject    handle to polarChoice (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: contents = cellstr(get(hObject,'String')) returns polarChoice contents as cell array
+%        contents{get(hObject,'Value')} returns selected item from polarChoice
+
+
+% --- Executes during object creation, after setting all properties.
+function polarChoice_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to polarChoice (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: popupmenu controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on selection change in intensityChoice.
+function intensityChoice_Callback(hObject, eventdata, handles)
+% hObject    handle to intensityChoice (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: contents = cellstr(get(hObject,'String')) returns intensityChoice contents as cell array
+%        contents{get(hObject,'Value')} returns selected item from intensityChoice
+
+
+
+function chunksStartNum_Callback(hObject, eventdata, handles)
+% hObject    handle to chunksStartNum (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of chunksStartNum as text
+%        str2double(get(hObject,'String')) returns contents of chunksStartNum as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function chunksStartNum_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to chunksStartNum (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
