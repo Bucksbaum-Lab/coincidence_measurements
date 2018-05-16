@@ -527,8 +527,10 @@ end
 
 cond = (tof(:, 1) > 50)&(tof(:, 2) > 50);
 cond = ApplyExperimentType(cond, shutterChoice, intensityChoice,...
-    paramChoice, polarChoice, delayChoice, shutterstatusRaw, intensitystatusRaw, paramstatusRaw,...
-    polarizationstatusRaw, delaystatusRaw, handles.polarInfo, handles.delayInfo);
+                           paramChoice, polarChoice, delayChoice, ...
+                           shutterstatusRaw, intensitystatusRaw, paramstatusRaw,...
+                           polarizationstatusRaw, delaystatusRaw, ...
+                           handles.polarInfo, handles.delayInfo);
 
 %plot PIPICO
 if (t0 ~= 1)&&(t0 ~= 0)&& ~(isnan(t0))
@@ -630,19 +632,7 @@ hold off
 
 %save outputs
 if saveCalib
-    points_of_interest = struct('calibPoints', calibPoints, 'filename', handles.datafile);
-
-    if ~exist([handles.path '\analysis'], 'dir')
-        mkdir([handles.path '\analysis']);
-        pause(1)
-    end
-    
-    timee = clock;
-    filename = [handles.datafile, '-points_of_interest-', date, '-', num2str(timee(4)), '-',...
-        num2str(timee(5)), '-', num2str(floor(timee(6))), '.mat'];
-    filename = fullfile([handles.path '\analysis\'], filename);
-    
-    save(filename, 'points_of_interest', '-v7.3');
+    saveCalibration(handles, calibPoints);
 
 end
 
@@ -652,6 +642,22 @@ set(handles.tofHist, 'string', 'histograms');
 %save any values saved to handles
 guidata(hObject, handles);
 
+function saveCalibration(handles, calibPoints)
+    
+points_of_interest = struct('calibPoints', calibPoints, 'filename', handles.datafile);
+
+if ~exist([handles.path '\analysis'], 'dir')
+    mkdir([handles.path '\analysis']);
+    pause(1)
+end
+
+timee = clock;
+filename = [handles.datafile, '-points_of_interest-', date, '-', num2str(timee(4)), '-',...
+    num2str(timee(5)), '-', num2str(floor(timee(6))), '.mat'];
+filename = fullfile([handles.path '\analysis\'], filename);
+
+save(filename, 'points_of_interest', '-v7.3');
+    
 
 
 function tweekParams_Callback(hObject, eventdata, handles)
