@@ -527,14 +527,14 @@ plotPIPICO(tof, t0(1), 'tof 1st (ns)', 'tof 2st (ns)')
 
 %plot histograms of tof, x position, and y position
 % Exclude entries that are not events (assuming no ion has tof exactly 0)
-plotCalibrationHist(rX(tof ~= 0),  t0(1), tofNumBins, 'x (mm)')
+plotCalibrationHist(rX(tof ~= 0),  t0(1), tofNumBins, 'x (mm)');
 plotCalibrationHist(rY(tof ~= 0),  t0(2), tofNumBins, 'y (mm)')
-plotCalibrationHist(tof(tof ~= 0), t0(3), tofNumBins, 'tof (ns)')
+[bins, values] = plotCalibrationHist(tof(tof ~= 0), t0(3), tofNumBins, 'tof (ns)');
 hold on
 
 %plot figures with the histogram tof fit
 if prod(calibTofMin)*prod(calibTofMax) > 0
-    [calibPoints] = fitTOF(bins, values, calibTofMin, calibTofMax, calibMass, calibCharge);
+    [calibPoints(6,:)] = fitTOF(bins, values, calibTofMin, calibTofMax, calibMass, calibCharge);
     set(handles.calibPoints, 'data', calibPoints)
 end
 hold off
@@ -561,7 +561,7 @@ xlabel(label1)
 ylabel(label2)
 
 
-function plotCalibrationHist(xall, x0, num_bins, labelx)
+function [bins, values] = plotCalibrationHist(xall, x0, num_bins, labelx)
 if (x0 ~= 1)&&~(isnan(x0))
     xall = xall-x0;
     [values, bins] = hist(xall, num_bins);
@@ -575,7 +575,7 @@ xlabel(labelx)
 title(['number of hits ' num2str(numel(xall))])
 
 
-function [calibPoints] = fitTOF(bins, values, calibTofMin, calibTofMax, ...
+function [tof_fits] = fitTOF(bins, values, calibTofMin, calibTofMax, ...
                                 calibMass, calibCharge)
 tof_peaks = [0, 0, 0];
 colorArray = [1, .5, .5; .5, .75, .5; .75, 0, .75];
@@ -595,7 +595,7 @@ legend('data', ['mass ' num2str(calibMass(1)) ' charge '...
     ['mass ' num2str(calibMass(3)) ' charge '...
     num2str(calibCharge(3)) ' tof peak ' num2str(tof_peaks(3))])
 
-calibPoints(6, :)=tof_peaks;
+tof_fits = tof_peaks;
 
 
 
