@@ -489,9 +489,6 @@ rX = handles.ions_x;
 rY = handles.ions_y;
 
 %get the necessary data from UI vectors
-x0 = t0(1);
-y0 = t0(2);
-t0 = t0(3);
 calibMass = calibPoints(1, :);
 calibCharge = calibPoints(2, :);
 calibTofMin = calibPoints(3, :);
@@ -523,78 +520,23 @@ cond = ...
                         handles.paramstatusRaw, handles.polarizationstatusRaw,...
                         handles.delaystatusRaw, handles.polarInfo, handles.delayInfo);
 
-%plot PIPICO
-if (t0 ~= 1)&&(t0 ~= 0)&& ~(isnan(t0))
-    figure()
-    plot(tof(cond, 1)-t0, tof(cond, 2)-t0, '.')
-else
-    figure()
-    plot(tof(cond, 1), tof(cond, 2), '.')
-end
-xlabel('tof 1st (ns)')
-ylabel('tof 2nd (ns)')
 
 %apply the conditions
 tof = tof(cond, :);
 rX = rX(cond, :);
 rY = rY(cond, :);
-tof = tof(:);
-rX = rX(:);
-rY = rY(:);
+% tof = tof(:);
+% rX = rX(:);
+% rY = rY(:);
 
-% Exclude entries that are not events (assuming no ion has tof exactly 0)
-rX = rX(tof ~= 0);
-rY = rY(tof ~= 0);
-tof = tof(tof ~= 0);
-
+plotPIPICO(tof, t0(1), 'tof 1st (ns)', 'tof 2st (ns)')
 
 %plot histograms of tof, x position, and y position
-if (x0 ~= 1)&&~(isnan(x0))
-    rX = rX-x0;
-    [values, bins] = hist(rX, tofNumBins);
-    
-    figure()
-    plot(bins, values)
-    hold on
-else
-    [values, bins] = hist(rX, tofNumBins);
-    
-    figure()
-    plot(bins, values)
-    hold on
-end
-xlabel('x (mm)')
-title(['number of hits ' num2str(numel(tof))])
-
-if (y0 ~= 1)&&~(isnan(y0))
-    rY = rY-y0;
-    [values, bins] = hist(rY, tofNumBins);
-    
-    figure()
-    plot(bins, values)
-    hold on
-else
-    [values, bins] = hist(rY, tofNumBins);
-    
-    figure()
-    plot(bins, values)
-    hold on
-end
-xlabel('y (mm)')
-title(['number of hits ' num2str(numel(tof))])
-
-if (t0 ~= 1)&&~(isnan(t0))
-    tof = tof-t0;
-    [values, bins] = hist(tof, tofNumBins);
-else
-    [values, bins] = hist(tof, tofNumBins);
-end
-
-figure()
-plot(bins, values)
+% Exclude entries that are not events (assuming no ion has tof exactly 0)
+plotCalibrationHist(rX(tof ~= 0),  t0(1), tofNumBins, 'x (mm)')
+plotCalibrationHist(rY(tof ~= 0),  t0(2), tofNumBins, 'y (mm)')
+plotCalibrationHist(tof(tof ~= 0), t0(3), tofNumBins, 'tof (ns)')
 hold on
-xlabel('tof (ns)')
-title(['number of hits ' num2str(numel(tof))])
 
 %plot figures with the histogram tof fit
 if prod(calibTofMin)*prod(calibTofMax) > 0
@@ -612,6 +554,31 @@ set(handles.tofHist, 'string', 'histograms');
 
 %save any values saved to handles
 guidata(hObject, handles);
+
+function plotPIPICO(tof, t0, label1, label2)
+if (t0 ~= 1)&&(t0 ~= 0)&& ~(isnan(t0))
+    figure()
+    plot(tof(:, 1)-t0, tof(:, 2)-t0, '.')
+else
+    figure()
+    plot(tof(:, 1), tof(:, 2), '.')
+end
+xlabel(label1)
+ylabel(label2)
+
+
+function plotCalibrationHist(xall, x0, num_bins, labelx)
+if (x0 ~= 1)&&~(isnan(x0))
+    xall = xall-x0;
+    [values, bins] = hist(xall, num_bins);
+else
+    [values, bins] = hist(xall, num_bins);
+end
+
+figure()
+plot(bins, values)
+xlabel(labelx)
+title(['number of hits ' num2str(numel(xall))])
 
 
 function [calibPoints] = fitTOF(bins, values, calibTofMin, calibTofMax, ...
