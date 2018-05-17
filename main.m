@@ -1236,6 +1236,7 @@ else
         handles.ions_y, handles.numHitsRaw, eVArray, thetaArray, tof_Sim, r_Sim,...
         handles.shutterstatusRaw, handles.intensitystatusRaw, handles.polarizationstatusRaw,...
         handles.paramStatusRaw, handles.delayStatusRaw, 0);
+
 end
 
 if saveData
@@ -2119,7 +2120,6 @@ function loadCalib_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 % Hint: get(hObject,'Value') returns toggle state of loadCalib
-<<<<<<< HEAD
 
 
 % --- Executes on button press in breakUpData.
@@ -2253,5 +2253,3 @@ function chunksStartNum_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
-=======
->>>>>>> parent of 16062a6... not suer why I have to do this
