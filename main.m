@@ -527,9 +527,9 @@ plotPIPICO(tof, t0(1), 'tof 1st (ns)', 'tof 2st (ns)')
 
 %plot histograms of tof, x position, and y position
 % Exclude entries that are not events (assuming no ion has tof exactly 0)
-plotCalibrationHist(rX(tof ~= 0),  t0(1), tofNumBins, 'x (mm)');
-plotCalibrationHist(rY(tof ~= 0),  t0(2), tofNumBins, 'y (mm)')
-[bins, values] = plotCalibrationHist(tof(tof ~= 0), t0(3), tofNumBins, 'tof (ns)');
+plotCalibrationHist(rX(tof ~= 0),  t0(1), tofNumBins, 'x (mm)', true);
+plotCalibrationHist(rY(tof ~= 0),  t0(2), tofNumBins, 'y (mm)', true)
+[bins, values] = plotCalibrationHist(tof(tof ~= 0), t0(3), tofNumBins, 'tof (ns)', true);
 hold on
 
 %plot figures with the histogram tof fit
@@ -549,6 +549,34 @@ set(handles.tofHist, 'string', 'histograms');
 %save any values saved to handles
 guidata(hObject, handles);
 
+
+function plotBrokenDataTof ()
+    [loadFile, loadPath] = uigetfile(handles.path);
+    loadFile = loadFile(1:end-5);
+    allfiles = dir([loadPath, '\*.mat']);
+    numfiles = length(allfiles);
+    figure()
+    for nn = 1:numfiles
+        load([loadPath, loadFile, num2str(nn), '.mat']);
+        tof = loaded_data.ions_tof;
+        cond = (tof(:, 1) > 50)&(tof(:, 2) > 50);
+        cond = ...
+            ApplyExperimentType(cond, get(handles.shutterChoice, 'value'), ...
+                                get(handles.intensityChoice, 'value'), get(handles.paramChoice, 'value'), ...
+                                get(handles.polarChoice, 'value'), get(handles.delayChoice, 'value'),...
+                                loaded_data.shutterstatusRaw,   loaded_data.intensitystatusRaw,...
+                                loaded_data.paramstatusRaw, loaded_data.polarizationstatusRaw,...
+                                loaded_data.delaystatusRaw, loaded_data.polarInfo, loaded_data.delayInfo);
+        sum(cond)
+        tof = tof(cond, :);
+        
+        plotCalibrationHist(tof(tof ~= 0), t0(3), tofNumBins, 'tof (ns)', false, ...
+                            'Color', [1 - (nn-1)/numfiles, 0, (nn-1)/numfiles]);
+        hold on 
+    end
+    hold off
+
+
 function plotPIPICO(tof, t0, label1, label2)
 if (t0 ~= 1)&&(t0 ~= 0)&& ~(isnan(t0))
     figure()
@@ -561,16 +589,19 @@ xlabel(label1)
 ylabel(label2)
 
 
-function [bins, values] = plotCalibrationHist(xall, x0, num_bins, labelx)
+function [bins, values] = plotCalibrationHist(xall, x0, num_bins, labelx, ...
+                                              newfigure, varargin)
 if (x0 ~= 1)&&~(isnan(x0))
     xall = xall-x0;
     [values, bins] = hist(xall, num_bins);
 else
     [values, bins] = hist(xall, num_bins);
 end
+if (newfigure)
+    figure()
+end
 
-figure()
-plot(bins, values)
+plot(bins, values, varargin{:})
 xlabel(labelx)
 title(['number of hits ' num2str(numel(xall))])
 
