@@ -465,7 +465,6 @@ guidata(hObject, handles);
 set(handles.findTof, 'string', 'find tof');
 
 
-
 % --- Executes on button press in tofHist.
 %creates histogram of tof or mass
 function tofHist_Callback(hObject, eventdata, handles)
@@ -510,7 +509,6 @@ elseif prod(isnan(calibTofMin))||prod(isnan(calibTofMax))
 end
 
 %set conditions for shutterChoice and paramChoice settings
-
 cond = (tof(:, 1) > 50)&(tof(:, 2) > 50);
 cond = ...
     ApplyExperimentType(cond, get(handles.shutterChoice, 'value'), ...
@@ -520,14 +518,10 @@ cond = ...
                         handles.paramstatusRaw, handles.polarizationstatusRaw,...
                         handles.delaystatusRaw, handles.polarInfo, handles.delayInfo);
 
-
 %apply the conditions
 tof = tof(cond, :);
 rX = rX(cond, :);
 rY = rY(cond, :);
-% tof = tof(:);
-% rX = rX(:);
-% rY = rY(:);
 
 plotPIPICO(tof, t0(1), 'tof 1st (ns)', 'tof 2st (ns)')
 
