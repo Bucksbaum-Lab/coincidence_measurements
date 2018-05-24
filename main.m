@@ -175,6 +175,8 @@ else
     delayInfo = 0;
 end
 
+handles.delayInfo = delayInfo;
+
 if exist([handles.path '\polarizationInfo.txt'], 'file') == 2
     polarInfo = load([handles.path '\polarizationInfo.txt']);
     x = cell(size((polarInfo(1,:))',1)+1,1);
@@ -189,17 +191,22 @@ else
     polarInfo = 0;
 end
 
-if exist([handles.path '\paramInfo.txt'], 'file') == 2
-    paramInfo = readtable([handles.path '\paramInfo.txt']);
+handles.polarInfo = polarInfo;
+
+if exist([handles.path '\parameterInfo.txt'], 'file') == 2
+    paramInfo = readtable([handles.path '\parameterInfo.txt']);
     x = cell(size(paramInfo(2,:),2)+1,1);
     x(2:end) = table2cell(paramInfo(2,:));
     x(1) = {'all'};
+    x = lower(x);
 
     set(handles.paramChoice, 'string', x);
 else
     set(handles.paramChoice, 'string', {'all'})
     paramInfo = 0;
 end
+
+handles.paramInfo = paramInfo;
 
 eventtags = loadIfExists([handles.path '\eventtags.txt']);
 shutterstatus = loadIfExists([handles.path '\shutterclosed.txt'], size(eventtags, 1));
@@ -229,7 +236,6 @@ if breakUpData
 
             %initialize the arrays for holding ion info
             [numshots,maxions] = size(rawdata);
-            eventtags = [EventTagn(((mm-1)*numChunks+1):mm*numChunks)-EventTagn((mm-1)*numChunks+1); numshots];
             maxions = (maxions-2)/3;
 
             desiredSize = rawDataStore.ReadSize;
@@ -243,6 +249,8 @@ if breakUpData
 
             end
 
+            eventtags = [EventTagn(((mm-1)*numChunks+1):mm*numChunks)-EventTagn((mm-1)*numChunks+1); numshots];
+            
             ions_x = zeros(numshots, maxions);
             ions_y = zeros(numshots, maxions);
             ions_tof = zeros(numshots, maxions);
@@ -380,6 +388,7 @@ function [handles, delayInfo, polarInfo] = loadMatData(handles, filename)
     handles.intensitystatusRaw = loaded_data.intensitystatusRaw;
     handles.delayInfo = loaded_data.delayInfo;
     handles.polarInfo = loaded_data.polarInfo;
+    handles.paramInfo = loaded_data.paramInfo;
     
     delayInfo = handles.delayInfo;
     x = cell(size((delayInfo(1,:))',1)+1,1);
@@ -396,6 +405,7 @@ function [handles, delayInfo, polarInfo] = loadMatData(handles, filename)
         x(nn+1) = {num2str(polarInfo(1,nn))};
     end
     x(1) = {'all'};
+    x = lower(x);
 
     set(handles.polarChoice, 'string', x);
     
@@ -548,7 +558,7 @@ plotPIPICO(tof, t0(1), 'tof 1st (ns)', 'tof 2st (ns)')
 %plot histograms of tof, x position, and y position
 % Exclude entries that are not events (assuming no ion has tof exactly 0)
 plotCalibrationHist(rX(tof ~= 0),  t0(1), tofNumBins, 'x (mm)', true);
-plotCalibrationHist(rY(tof ~= 0),  t0(2), tofNumBins, 'y (mm)', true)
+plotCalibrationHist(rY(tof ~= 0),  t0(2), tofNumBins, 'y (mm)', true);
 [bins, values] = plotCalibrationHist(tof(tof ~= 0), t0(3), tofNumBins, 'tof (ns)', true);
 hold on
 
