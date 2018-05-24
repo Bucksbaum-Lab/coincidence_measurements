@@ -1,10 +1,12 @@
-function [Sim] = Flym_Sim(charge, mass, eV, theta, phi, ss, V1, VM, uniqueid)
+function [Sim] = Flym_Sim(charge, mass, eV, theta, phi, ss, V1, VM)
 
 %phi(eV < 0) = phi(eV < 0) + 180;
 fly_spectromete_filename = ['.\flym\fly_Spectrometer'...
-                            '_uniqueid=' uniqueid '.txt' '.fly2'];
+                            '_M=' strrep(num2str(mass),   '  ', '_') ...
+                            '_Z=' strrep(num2str(charge), '  ', '_') '.fly2'];
 record_out_filename = ['.\flym\Lab_record_out'...
-                       '_uniqueid=' uniqueid '.txt'];
+                       '_M=' strrep(num2str(mass),   '  ', '_') ...
+                       '_Z=' strrep(num2str(charge), '  ', '_') '.txt'];
 
 Build_Fly(charge, mass, eV, theta, phi, 53-ss, fly_spectromete_filename);
 

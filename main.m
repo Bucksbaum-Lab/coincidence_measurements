@@ -102,19 +102,13 @@ function loadfile_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 loadSave = get(handles.loadSave, 'value');
-breakUpData = get(handles.breakUpData, 'value');
-numChunks = get(handles.numEventTags, 'string');
-numChunks = str2double(numChunks);
 
 %set the error bar to no errors
 set(handles.err, 'string', 'please select a file, raw or pre-loaded');
 
 %check that the file exist
-
 [file, handles.path] = uigetfile({'*.txt;*.mat'});
-
 set(handles.err, 'string', 'no errors');
-
 set(handles.loadfile, 'string', 'loading');
 drawnow
 
@@ -123,219 +117,248 @@ filename = [handles.path file];
 [~, handles.datafile, ext] = fileparts(filename);
 
 if strcmp(ext, '.txt')
-    
-    %estimate how long it will take to load file
-    estimatedTime = 0;
+    [handles, delayInfo, polarInfo] = loadTxtData(handles, filename);
+elseif strcmp(ext, '.mat')
+    [handles, delayInfo, polarInfo] = loadMatData(handles, filename);
+else
+    set(handles.err, 'string', 'you did not select a .mat or .txt file');
+    error('you did not select a .mat or .txt file')
+end
 
-    for ii = 1:10
-        tic
-        testLoad = load([cd '\10000points.dat']);
-        estimatedTime = estimatedTime+toc;
+for ii = 1:10
+    tic
+    testLoad = load([cd '\10000points.dat']);
+    estimatedTime = estimatedTime+toc;
+end
+    
+if loadSave
+    saveLoadedData(handles, delayInfo, polarInfo)
+end
+
+%save any values saved to handles
+guidata(hObject, handles);
+
+clearvars -except handles
+
+set(handles.loadfile, 'string', 'load');
+
+function [handles, delayInfo, polarInfo] = loadTxtData(handles, filename)
+                                                  
+breakUpData = get(handles.breakUpData, 'value');
+numChunks = get(handles.numEventTags, 'string');
+numChunks = str2double(numChunks);
+
+%estimate how long it will take to load file
+estimatedTime = 0;
+
+for ii = 1:10
+    tic
+    testLoad = load([cd '\10000points.txt']);
+    estimatedTime = estimatedTime+toc;
+end
+
+fileInfo = dir(filename);
+fileInfoTest = dir([cd '\10000points.txt']);
+estimatedTime = estimatedTime/fileInfoTest.bytes/10*fileInfo.bytes;
+clear testLoad;
+
+set(handles.err, 'string', ['estimated completed load time: '...
+    datestr(datetime('now')+seconds(estimatedTime))]);
+drawnow
+
+%load the file and the other info required
+if exist([handles.path '\DelayInfo.txt'], 'file') == 2
+    delayInfo = load([handles.path '\DelayInfo.txt']);
+    x = cell(size((delayInfo(1,:))',1)+1,1);
+    for nn = 1:size((delayInfo(1,:))',1)
+        x(nn+1) = {num2str(delayInfo(1,nn))};
     end
+    x(1) = {'all'};
 
-    fileInfo = dir(filename);
-    fileInfoTest = dir([cd '\10000points.txt']);
-    estimatedTime = estimatedTime/fileInfoTest.bytes/10*fileInfo.bytes;
-    clear testLoad;
+    set(handles.delayChoice, 'string', x);
+else
+    set(handles.delayChoice, 'string', {'all'})
+    delayInfo = 0;
+end
 
-    set(handles.err, 'string', ['estimated completed load time: '...
-        datestr(datetime('now')+seconds(estimatedTime))]);
-    drawnow
-    
-    %load the file and the other info required
-    if exist([handles.path '\DelayInfo.txt'], 'file') == 2
-        delayInfo = load([handles.path '\DelayInfo.txt']);
-        x = cell(size((delayInfo(1,:))',1)+1,1);
-        for nn = 1:size((delayInfo(1,:))',1)
-            x(nn+1) = {num2str(delayInfo(1,nn))};
-        end
-        x(1) = {'all'};
-
-        set(handles.delayChoice, 'string', x);
-    else
-        set(handles.delayChoice, 'string', {'all'})
-        delayInfo = 0;
+if exist([handles.path '\polarizationInfo.txt'], 'file') == 2
+    polarInfo = loadIfExists([handles.path '\polarizationInfo.txt']);
+    x = cell(size((polarInfo(1,:))',1)+1,1);
+    for nn = 1:size((polarInfo(1,:))',1)
+        x(nn+1) = {num2str(polarInfo(1,nn))};
     end
-    
-    if exist([handles.path '\polarizationInfo.txt'], 'file') == 2
-        polarInfo = loadIfExists([handles.path '\polarizationInfo.txt']);
-        x = cell(size((polarInfo(1,:))',1)+1,1);
-        for nn = 1:size((polarInfo(1,:))',1)
-            x(nn+1) = {num2str(polarInfo(1,nn))};
-        end
-        x(1) = {'all'};
+    x(1) = {'all'};
 
-        set(handles.polarChoice, 'string', x);
-    else
-        set(handles.polarChoice, 'string', {'all'})
-        polarInfo = 0;
-    end
-    
-    eventtags = loadIfExists([handles.path '\eventtags.txt']);
-    shutterstatus = loadIfExists([handles.path '\shutterclosed.txt'], size(eventtags, 1));
-    delaystatus = loadIfExists([handles.path '\Delay.txt'], size(eventtags, 1));
-    polarizationstatus = loadIfExists([handles.path '\Polarization.txt'], size(eventtags, 1));
-    paramstatus = loadIfExists([handles.path '\ParamIndex.txt'], size(eventtags, 1));
-    intensitystatus = loadIfExists([handles.path '\Intensity.txt'], size(eventtags,1));
-    
-    if breakUpData
-        
-        chunksStartNum = str2double(get(handles.chunksStartNum, 'string'));
-        
-        timee = clock;
-        loadInfo = [date, '-', num2str(timee(4)), '-', num2str(timee(5)), '-', num2str(floor(timee(6))), '_'];
-        
-        rawDataStore = tabularTextDatastore(filename);
-        EventTagn = [eventtags; 10^10];
-        
-        loadSave = false;
-        
-        for mm = 1:floor((length(EventTagn)-1)/numChunks)
+    set(handles.polarChoice, 'string', x);
+else
+    set(handles.polarChoice, 'string', {'all'})
+    polarInfo = 0;
+end
 
-            if hasdata(rawDataStore)
-            
-                rawDataStore.ReadSize = EventTagn(numChunks*mm+1)-EventTagn(numChunks*mm-(numChunks-1));
-                rawdata = table2array(read(rawDataStore));
+eventtags = loadIfExists([handles.path '\eventtags.txt']);
+shutterstatus = loadIfExists([handles.path '\shutterclosed.txt'], size(eventtags, 1));
+delaystatus = loadIfExists([handles.path '\Delay.txt'], size(eventtags, 1));
+polarizationstatus = loadIfExists([handles.path '\Polarization.txt'], size(eventtags, 1));
+paramstatus = loadIfExists([handles.path '\ParamIndex.txt'], size(eventtags, 1));
+intensitystatus = loadIfExists([handles.path '\Intensity.txt'], size(eventtags,1));
 
-                %initialize the arrays for holding ion info
-                [numshots,maxions] = size(rawdata);
-                eventtags = [EventTagn(((mm-1)*numChunks+1):mm*numChunks)-EventTagn((mm-1)*numChunks+1); numshots];
-                maxions = (maxions-2)/3;
-                
-                desiredSize = rawDataStore.ReadSize;
-                
-                while (numshots ~= desiredSize) && hasdata(rawDataStore)
-                
-                    rawDataStore.ReadSize = rawDataStore.ReadSize - numshots;
-                    rawdata = [rawdata; table2array(read(rawDataStore))];
-                    
-                    [numshots, ~] = size(rawdata);
-                    
-                end
+if breakUpData
 
-                ions_x = zeros(numshots, maxions);
-                ions_y = zeros(numshots, maxions);
-                ions_tof = zeros(numshots, maxions);
+    chunksStartNum = str2double(get(handles.chunksStartNum, 'string'));
 
-                %save the info into respective arrays
-                handles.numHitsRaw = rawdata(:, 2);
+    timee = clock;
+    loadInfo = [date, '-', num2str(timee(4)), '-', num2str(timee(5)), '-', num2str(floor(timee(6))), '_'];
 
-                for nn = 1:maxions
-                    ions_x(:, nn) = rawdata(:, 3*nn);
-                    ions_y(:, nn) = rawdata(:, 3*nn+1);
-                    ions_tof(:, nn) = rawdata(:, 3*nn+2);
-                end
+    rawDataStore = tabularTextDatastore(filename);
+    EventTagn = [eventtags; 10^10];
 
-                handles.ions_x = ions_x;
-                handles.ions_y = ions_y;
-                handles.ions_tof = ions_tof;
+    loadSave = false;
 
-                shutterstatusRaw = zeros(numshots, 1);
-                delaystatusRaw = zeros(numshots, 1);
-                polarizationstatusRaw = zeros(numshots, 1);
-                paramstatusRaw = zeros(numshots, 1);
-                intensitystatusRaw = zeros(numshots, 1);
-                
-                for nn = 1:length(eventtags)-1
+    for mm = 1:floor((length(EventTagn)-1)/numChunks)
 
-                    shutterstatusRaw((eventtags(nn) + 1):eventtags(nn + 1)) = ...
-                        repmat(shutterstatus(((mm-1)*numChunks+1)+nn-1), (eventtags(nn+1)-eventtags(nn)), 1);
+        if hasdata(rawDataStore)
 
-                    delaystatusRaw((eventtags(nn) + 1):eventtags(nn + 1)) = ...
-                        repmat(delaystatus(((mm-1)*numChunks+1)+nn-1), (eventtags(nn+1)-eventtags(nn)), 1);
+            rawDataStore.ReadSize = EventTagn(numChunks*mm+1)-EventTagn(numChunks*mm-(numChunks-1));
+            rawdata = table2array(read(rawDataStore));
 
-                    polarizationstatusRaw((eventtags(nn) + 1):eventtags(nn + 1)) = ...
-                        repmat(polarizationstatus(((mm-1)*numChunks+1)+nn-1), (eventtags(nn+1)-eventtags(nn)), 1);
-                    
-                    paramstatusRaw((eventtags(nn) + 1):eventtags(nn + 1)) = ...
-                        repmat(paramstatus(((mm-1)*numChunks+1)+nn-1), (eventtags(nn+1)-eventtags(nn)), 1);
-                    
-                    intensitystatusRaw((eventtags(nn) + 1):eventtags(nn + 1)) = ...
-                        repmat(intensitystatus(((mm-1)*numChunks+1)+nn-1), (eventtags(nn+1)-eventtags(nn)), 1);
+            %initialize the arrays for holding ion info
+            [numshots,maxions] = size(rawdata);
+            eventtags = [EventTagn(((mm-1)*numChunks+1):mm*numChunks)-EventTagn((mm-1)*numChunks+1); numshots];
+            maxions = (maxions-2)/3;
 
-                end
+            desiredSize = rawDataStore.ReadSize;
 
-                handles.shutterstatusRaw = shutterstatusRaw;
-                handles.delaystatusRaw = delaystatusRaw;
-                handles.polarizationstatusRaw = polarizationstatusRaw;
-                handles.paramstatusRaw = paramstatusRaw;
-                handles.intensitystatusRaw = intensitystatusRaw;
+            while (numshots ~= desiredSize) && hasdata(rawDataStore)
 
-                loaded_data = struct('datafile', handles.datafile, 'path', handles.path,...
-                    'numHitsRaw', handles.numHitsRaw, 'ions_x', handles.ions_x,...
-                    'ions_y', handles.ions_y, 'ions_tof', handles.ions_tof,...
-                    'shutterstatusRaw', handles.shutterstatusRaw,...
-                    'delaystatusRaw', handles.delaystatusRaw,...
-                    'polarizationstatusRaw', handles.polarizationstatusRaw,...
-                    'paramstatusRaw', handles.paramstatusRaw,...
-                    'intensitystatusRaw', handles.intensitystatusRaw,...
-                    'shotsStartZero', EventTagn((mm-1)*numChunks+1)-1,...
-                    'delayInfo', delayInfo, 'polarInfo', polarInfo);
+                rawDataStore.ReadSize = rawDataStore.ReadSize - numshots;
+                rawdata = [rawdata; table2array(read(rawDataStore))];
 
-                if ~exist([handles.path '\analysis\loadedData'], 'dir')
-                    mkdir([handles.path '\analysis\loadedData']);
-                    pause(1)
-                end
-
-                filename = [handles.datafile, '-loaded_data-', loadInfo, num2str(chunksStartNum+mm), '.mat'];
-                filename = fullfile([handles.path '\analysis\loadedData'], filename);
-
-                save(filename, 'loaded_data', '-v7.3');
+                [numshots, ~] = size(rawdata);
 
             end
+
+            ions_x = zeros(numshots, maxions);
+            ions_y = zeros(numshots, maxions);
+            ions_tof = zeros(numshots, maxions);
+
+            %save the info into respective arrays
+            handles.numHitsRaw = rawdata(:, 2);
+
+            for nn = 1:maxions
+                ions_x(:, nn) = rawdata(:, 3*nn);
+                ions_y(:, nn) = rawdata(:, 3*nn+1);
+                ions_tof(:, nn) = rawdata(:, 3*nn+2);
+            end
+
+            handles.ions_x = ions_x;
+            handles.ions_y = ions_y;
+            handles.ions_tof = ions_tof;
+
+            shutterstatusRaw = zeros(numshots, 1);
+            delaystatusRaw = zeros(numshots, 1);
+            polarizationstatusRaw = zeros(numshots, 1);
+            paramstatusRaw = zeros(numshots, 1);
+            intensitystatusRaw = zeros(numshots, 1);
+
+            for nn = 1:length(eventtags)-1
+
+                shutterstatusRaw((eventtags(nn) + 1):eventtags(nn + 1)) = ...
+                    repmat(shutterstatus(((mm-1)*numChunks+1)+nn-1), (eventtags(nn+1)-eventtags(nn)), 1);
+
+                delaystatusRaw((eventtags(nn) + 1):eventtags(nn + 1)) = ...
+                    repmat(delaystatus(((mm-1)*numChunks+1)+nn-1), (eventtags(nn+1)-eventtags(nn)), 1);
+
+                polarizationstatusRaw((eventtags(nn) + 1):eventtags(nn + 1)) = ...
+                    repmat(polarizationstatus(((mm-1)*numChunks+1)+nn-1), (eventtags(nn+1)-eventtags(nn)), 1);
+
+                paramstatusRaw((eventtags(nn) + 1):eventtags(nn + 1)) = ...
+                    repmat(paramstatus(((mm-1)*numChunks+1)+nn-1), (eventtags(nn+1)-eventtags(nn)), 1);
+
+                intensitystatusRaw((eventtags(nn) + 1):eventtags(nn + 1)) = ...
+                    repmat(intensitystatus(((mm-1)*numChunks+1)+nn-1), (eventtags(nn+1)-eventtags(nn)), 1);
+
+            end
+
+            handles.shutterstatusRaw = shutterstatusRaw;
+            handles.delaystatusRaw = delaystatusRaw;
+            handles.polarizationstatusRaw = polarizationstatusRaw;
+            handles.paramstatusRaw = paramstatusRaw;
+            handles.intensitystatusRaw = intensitystatusRaw;
+
+            loaded_data = struct('datafile', handles.datafile, 'path', handles.path,...
+                'numHitsRaw', handles.numHitsRaw, 'ions_x', handles.ions_x,...
+                'ions_y', handles.ions_y, 'ions_tof', handles.ions_tof,...
+                'shutterstatusRaw', handles.shutterstatusRaw,...
+                'delaystatusRaw', handles.delaystatusRaw,...
+                'polarizationstatusRaw', handles.polarizationstatusRaw,...
+                'paramstatusRaw', handles.paramstatusRaw,...
+                'intensitystatusRaw', handles.intensitystatusRaw,...
+                'shotsStartZero', EventTagn((mm-1)*numChunks+1)-1,...
+                'delayInfo', delayInfo, 'polarInfo', polarInfo);
+
+            if ~exist([handles.path '\analysis\loadedData'], 'dir')
+                mkdir([handles.path '\analysis\loadedData']);
+                pause(1)
+            end
+
+            filename = [handles.datafile, '-loaded_data-', loadInfo, num2str(chunksStartNum+mm), '.mat'];
+            filename = fullfile([handles.path '\analysis\loadedData'], filename);
+
+            save(filename, 'loaded_data', '-v7.3');
+
         end
-        
-    else
-        
-        rawdata = sparse(load(filename));
-        
-        %initialize the arrays for holding ion info
-        [numshots,maxions] = size(rawdata);
-        eventtags = [eventtags; numshots];
-        maxions = (maxions-2)/3;
-
-        ions_x = zeros(numshots, maxions);
-        ions_y = zeros(numshots, maxions);
-        ions_tof = sparse(numshots, maxions);
-
-        %save the info into respective arrays
-        handles.numHitsRaw = rawdata(:, 2);
-
-        for nn = 1:maxions
-            ions_x(:, nn) = rawdata(:, 3*nn);
-            ions_y(:, nn) = rawdata(:, 3*nn+1);
-            ions_tof(:, nn) = rawdata(:, 3*nn+2);
-        end
-
-        handles.ions_x = ions_x;
-        handles.ions_y = ions_y;
-        handles.ions_tof = ions_tof;
-
-        shutterstatusRaw = nan(eventtags(length(eventtags)), 1);
-        delaystatusRaw = nan(eventtags(length(eventtags)), 1);
-        polarizationstatusRaw = nan(eventtags(length(eventtags)), 1);
-        paramstatusRaw = nan(eventtags(length(eventtags)), 1);
-
-        for nn = 1:length(eventtags)-1
-            shutterstatusRaw((eventtags(nn) + 1):eventtags(nn + 1)) = ...
-                repmat(shutterstatus(nn), (eventtags(nn+1)-eventtags(nn)), 1);
-            delaystatusRaw((eventtags(nn) + 1):eventtags(nn + 1)) = ...
-                repmat(delaystatus(nn), (eventtags(nn+1)-eventtags(nn)), 1);
-            polarizationstatusRaw((eventtags(nn) + 1):eventtags(nn + 1)) = ...
-                repmat(polarizationstatus(nn), (eventtags(nn+1)-eventtags(nn)), 1);
-            paramstatusRaw((eventtags(nn) + 1):eventtags(nn + 1)) = ...
-                repmat(polarizationstatus(nn), (eventtags(nn+1)-eventtags(nn)), 1);
-        end
-
-        handles.shutterstatusRaw = sparse(shutterstatusRaw);
-        handles.delaystatusRaw = sparse(delaystatusRaw);
-        handles.polarizationstatusRaw = sparse(polarizationstatusRaw);
-        handles.paramstatusRaw = sparse(paramstatusRaw);
-        
     end
-    
-elseif strcmp(ext, '.mat')
-    
+
+else
+
+    rawdata = sparse(load(filename));
+
+    %initialize the arrays for holding ion info
+    [numshots,maxions] = size(rawdata);
+    eventtags = [eventtags; numshots];
+    maxions = (maxions-2)/3;
+
+    ions_x = zeros(numshots, maxions);
+    ions_y = zeros(numshots, maxions);
+    ions_tof = sparse(numshots, maxions);
+
+    %save the info into respective arrays
+    handles.numHitsRaw = rawdata(:, 2);
+
+    for nn = 1:maxions
+        ions_x(:, nn) = rawdata(:, 3*nn);
+        ions_y(:, nn) = rawdata(:, 3*nn+1);
+        ions_tof(:, nn) = rawdata(:, 3*nn+2);
+    end
+
+    handles.ions_x = ions_x;
+    handles.ions_y = ions_y;
+    handles.ions_tof = ions_tof;
+
+    shutterstatusRaw = nan(eventtags(length(eventtags)), 1);
+    delaystatusRaw = nan(eventtags(length(eventtags)), 1);
+    polarizationstatusRaw = nan(eventtags(length(eventtags)), 1);
+    paramstatusRaw = nan(eventtags(length(eventtags)), 1);
+
+    for nn = 1:length(eventtags)-1
+        shutterstatusRaw((eventtags(nn) + 1):eventtags(nn + 1)) = ...
+            repmat(shutterstatus(nn), (eventtags(nn+1)-eventtags(nn)), 1);
+        delaystatusRaw((eventtags(nn) + 1):eventtags(nn + 1)) = ...
+            repmat(delaystatus(nn), (eventtags(nn+1)-eventtags(nn)), 1);
+        polarizationstatusRaw((eventtags(nn) + 1):eventtags(nn + 1)) = ...
+            repmat(polarizationstatus(nn), (eventtags(nn+1)-eventtags(nn)), 1);
+        paramstatusRaw((eventtags(nn) + 1):eventtags(nn + 1)) = ...
+            repmat(polarizationstatus(nn), (eventtags(nn+1)-eventtags(nn)), 1);
+    end
+
+    handles.shutterstatusRaw = sparse(shutterstatusRaw);
+    handles.delaystatusRaw = sparse(delaystatusRaw);
+    handles.polarizationstatusRaw = sparse(polarizationstatusRaw);
+    handles.paramstatusRaw = sparse(paramstatusRaw);
+
+end
+
+function [handles, delayInfo, polarInfo] = loadMatData(handles, filename)
     load(filename)
     
     handles.datafile = loaded_data.datafile;
@@ -371,22 +394,15 @@ elseif strcmp(ext, '.mat')
     set(handles.polarChoice, 'string', x);
     
     clear loaded_data
-    
-else
-    
-    set(handles.err, 'string', 'you did not select a .mat or .txt file');
-    error('you did not select a .mat or .txt file')
-    
-end
 
-if loadSave
+function saveLoadedData(handles, delayInfo, polarInfo)
     loaded_data = struct('datafile', handles.datafile, 'path', handles.path,...
-        'numHitsRaw', handles.numHitsRaw, ... %  'HitNoRaw', handles.HitNoRaw,...
-        'ions_x', handles.ions_x, 'ions_y', handles.ions_y,...
-        'ions_tof', handles.ions_tof, 'closedshutterRaw', handles.shutterstatusRaw,...
-        'chosenDelayRaw', handles.delaystatusRaw, 'chosenPolarizationRaw',...
-        handles.polarizationstatusRaw, 'chosenParamRaw', handles.paramstatusRaw,...
-        'delayInfo', delayInfo, 'polarInfo', polarInfo);
+                         'numHitsRaw', handles.numHitsRaw, ... %  'HitNoRaw', handles.HitNoRaw,...
+                         'ions_x', handles.ions_x, 'ions_y', handles.ions_y,...
+                         'ions_tof', handles.ions_tof, 'closedshutterRaw', handles.shutterstatusRaw,...
+                         'chosenDelayRaw', handles.delaystatusRaw, 'chosenPolarizationRaw',...
+                         handles.polarizationstatusRaw, 'chosenParamRaw', handles.paramstatusRaw,...
+                         'delayInfo', delayInfo, 'polarInfo', polarInfo);
 
     if ~exist([handles.path '\analysis'], 'dir')
         mkdir([handles.path '\analysis']);
@@ -400,17 +416,7 @@ if loadSave
     
     save(filename, 'loaded_data', '-v7.3');
 
-end
-
-%save any values saved to handles
-guidata(hObject, handles);
-
-clearvars -except handles
-
-set(handles.loadfile, 'string', 'load');
-
-
-
+    
 % --- Executes on button press in findTof.
 %finds the tof for a particle with some mass, charge and eV
 function findTof_Callback(hObject, eventdata, handles)
@@ -465,7 +471,6 @@ guidata(hObject, handles);
 set(handles.findTof, 'string', 'find tof');
 
 
-
 % --- Executes on button press in tofHist.
 %creates histogram of tof or mass
 function tofHist_Callback(hObject, eventdata, handles)
@@ -481,28 +486,14 @@ drawnow
 %get the necessary data from UI
 tofNumBins = str2double(get(handles.tofNumBins, 'string'));
 t0 = get(handles.commonParams, 'data');
-saveCalib = get(handles.saveCalib, 'value');
-shutterChoice = get(handles.shutterChoice, 'value');
-intensityChoice = get(handles.intensityChoice, 'value');
-polarChoice = get(handles.polarChoice, 'value');
-paramChoice = get(handles.paramChoice, 'value');
-delayChoice = get(handles.delayChoice, 'value');
 calibPoints = get(handles.calibPoints, 'data');
 
 %get the data
 tof = handles.ions_tof;
 rX = handles.ions_x;
 rY = handles.ions_y;
-shutterstatusRaw = handles.shutterstatusRaw;
-delaystatusRaw = handles.delaystatusRaw;
-polarizationstatusRaw = handles.polarizationstatusRaw;
-paramstatusRaw = handles.paramstatusRaw;
-intensitystatusRaw = handles.intensitystatusRaw;
 
 %get the necessary data from UI vectors
-x0 = t0(1);
-y0 = t0(2);
-t0 = t0(3);
 calibMass = calibPoints(1, :);
 calibCharge = calibPoints(2, :);
 calibTofMin = calibPoints(3, :);
@@ -524,112 +515,128 @@ elseif prod(isnan(calibTofMin))||prod(isnan(calibTofMax))
 end
 
 %set conditions for shutterChoice and paramChoice settings
-
 cond = (tof(:, 1) > 50)&(tof(:, 2) > 50);
-cond = ApplyExperimentType(cond, shutterChoice, intensityChoice,...
-    paramChoice, polarChoice, delayChoice, shutterstatusRaw, intensitystatusRaw, paramstatusRaw,...
-    polarizationstatusRaw, delaystatusRaw, handles.polarInfo, handles.delayInfo);
-
-%plot PIPICO
-if (t0 ~= 1)&&(t0 ~= 0)&& ~(isnan(t0))
-    figure()
-    plot(tof(cond, 1)-t0, tof(cond, 2)-t0, '.')
-else
-    figure()
-    plot(tof(cond, 1), tof(cond, 2), '.')
-end
-xlabel('tof 1st (ns)')
-ylabel('tof 2nd (ns)')
+cond = ...
+    ApplyExperimentType(cond, get(handles.shutterChoice, 'value'), ...
+                        get(handles.intensityChoice, 'value'), get(handles.paramChoice, 'value'), ...
+                        get(handles.polarChoice, 'value'), get(handles.delayChoice, 'value'),...
+                        handles.shutterstatusRaw,   handles.intensitystatusRaw,...
+                        handles.paramstatusRaw, handles.polarizationstatusRaw,...
+                        handles.delaystatusRaw, handles.polarInfo, handles.delayInfo);
 
 %apply the conditions
 tof = tof(cond, :);
 rX = rX(cond, :);
 rY = rY(cond, :);
-tof = tof(:);
-rX = rX(:);
-rY = rY(:);
 
-% Exclude entries that are not events (assuming no ion has tof exactly 0)
-rX = rX(tof ~= 0);
-rY = rY(tof ~= 0);
-tof = tof(tof ~= 0);
-
+plotPIPICO(tof, t0(1), 'tof 1st (ns)', 'tof 2st (ns)')
 
 %plot histograms of tof, x position, and y position
-if (x0 ~= 1)&&~(isnan(x0))
-    rX = rX-x0;
-    [values, bins] = hist(rX, tofNumBins);
-    
-    figure()
-    plot(bins, values)
-    hold on
-else
-    [values, bins] = hist(rX, tofNumBins);
-    
-    figure()
-    plot(bins, values)
-    hold on
-end
-xlabel('x (mm)')
-title(['number of hits ' num2str(numel(tof))])
-
-if (y0 ~= 1)&&~(isnan(y0))
-    rY = rY-y0;
-    [values, bins] = hist(rY, tofNumBins);
-    
-    figure()
-    plot(bins, values)
-    hold on
-else
-    [values, bins] = hist(rY, tofNumBins);
-    
-    figure()
-    plot(bins, values)
-    hold on
-end
-xlabel('y (mm)')
-title(['number of hits ' num2str(numel(tof))])
-
-if (t0 ~= 1)&&~(isnan(t0))
-    tof = tof-t0;
-    [values, bins] = hist(tof, tofNumBins);
-else
-    [values, bins] = hist(tof, tofNumBins);
-end
-
-figure()
-plot(bins, values)
+% Exclude entries that are not events (assuming no ion has tof exactly 0)
+plotCalibrationHist(rX(tof ~= 0),  t0(1), tofNumBins, 'x (mm)', true);
+plotCalibrationHist(rY(tof ~= 0),  t0(2), tofNumBins, 'y (mm)', true)
+[bins, values] = plotCalibrationHist(tof(tof ~= 0), t0(3), tofNumBins, 'tof (ns)', true);
 hold on
-xlabel('tof (ns)')
-title(['number of hits ' num2str(numel(tof))])
 
 %plot figures with the histogram tof fit
 if prod(calibTofMin)*prod(calibTofMax) > 0
-    tof_peaks = [0, 0, 0];
-    colorArray = [1, .5, .5; .5, .75, .5; .75, 0, .75];
-    
-    for ii = 1:3
-        fit_range = (calibTofMin(ii) < bins)&(bins < calibTofMax(ii));
-        fit_result = fit(bins(fit_range).', values(fit_range).', 'gauss1');
-        tof_peaks(ii) = fit_result.b1;
-        p = plot(bins(fit_range), fit_result(bins(fit_range)));
-        set(p, 'color', colorArray(ii, :))
-    end
-
-    legend('data', ['mass ' num2str(calibMass(1)) ' charge '...
-        num2str(calibCharge(1)) ' tof peak ' num2str(tof_peaks(1))],...
-        ['mass ' num2str(calibMass(2)) ' charge '...
-        num2str(calibCharge(2)) ' tof peak ' num2str(tof_peaks(2))],...
-        ['mass ' num2str(calibMass(3)) ' charge '...
-        num2str(calibCharge(3)) ' tof peak ' num2str(tof_peaks(3))])
-    
-    calibPoints(6, :)=tof_peaks;
+    [calibPoints(6,:)] = fitTOF(bins, values, calibTofMin, calibTofMax, calibMass, calibCharge);
     set(handles.calibPoints, 'data', calibPoints)
 end
 hold off
 
-%save outputs
-if saveCalib
+if get(handles.saveCalib, 'value')
+    saveCalibration(handles, calibPoints)
+end
+
+%reset the button string
+set(handles.tofHist, 'string', 'histograms');
+
+%save any values saved to handles
+guidata(hObject, handles);
+
+
+function plotBrokenDataTof ()
+    [loadFile, loadPath] = uigetfile(handles.path);
+    loadFile = loadFile(1:end-5);
+    allfiles = dir([loadPath, '\*.mat']);
+    numfiles = length(allfiles);
+    figure()
+    for nn = 1:numfiles
+        load([loadPath, loadFile, num2str(nn), '.mat']);
+        tof = loaded_data.ions_tof;
+        cond = (tof(:, 1) > 50)&(tof(:, 2) > 50);
+        cond = ...
+            ApplyExperimentType(cond, get(handles.shutterChoice, 'value'), ...
+                                get(handles.intensityChoice, 'value'), get(handles.paramChoice, 'value'), ...
+                                get(handles.polarChoice, 'value'), get(handles.delayChoice, 'value'),...
+                                loaded_data.shutterstatusRaw,   loaded_data.intensitystatusRaw,...
+                                loaded_data.paramstatusRaw, loaded_data.polarizationstatusRaw,...
+                                loaded_data.delaystatusRaw, loaded_data.polarInfo, loaded_data.delayInfo);
+        sum(cond)
+        tof = tof(cond, :);
+        
+        plotCalibrationHist(tof(tof ~= 0), t0(3), tofNumBins, 'tof (ns)', false, ...
+                            'Color', [1 - (nn-1)/numfiles, 0, (nn-1)/numfiles]);
+        hold on 
+    end
+    hold off
+
+
+function plotPIPICO(tof, t0, label1, label2)
+if (t0 ~= 1)&&(t0 ~= 0)&& ~(isnan(t0))
+    figure()
+    plot(tof(:, 1)-t0, tof(:, 2)-t0, '.')
+else
+    figure()
+    plot(tof(:, 1), tof(:, 2), '.')
+end
+xlabel(label1)
+ylabel(label2)
+
+
+function [bins, values] = plotCalibrationHist(xall, x0, num_bins, labelx, ...
+                                              newfigure, varargin)
+if (x0 ~= 1)&&~(isnan(x0))
+    xall = xall-x0;
+    [values, bins] = hist(xall, num_bins);
+else
+    [values, bins] = hist(xall, num_bins);
+end
+if (newfigure)
+    figure()
+end
+
+plot(bins, values, varargin{:})
+xlabel(labelx)
+title(['number of hits ' num2str(numel(xall))])
+
+
+function [tof_fits] = fitTOF(bins, values, calibTofMin, calibTofMax, ...
+                                calibMass, calibCharge)
+tof_peaks = [0, 0, 0];
+colorArray = [1, .5, .5; .5, .75, .5; .75, 0, .75];
+
+for ii = 1:3
+    fit_range = (calibTofMin(ii) < bins)&(bins < calibTofMax(ii));
+    fit_result = fit(bins(fit_range).', values(fit_range).', 'gauss1');
+    tof_peaks(ii) = fit_result.b1;
+    p = plot(bins(fit_range), fit_result(bins(fit_range)));
+    set(p, 'color', colorArray(ii, :))
+end
+
+legend('data', ['mass ' num2str(calibMass(1)) ' charge '...
+    num2str(calibCharge(1)) ' tof peak ' num2str(tof_peaks(1))],...
+    ['mass ' num2str(calibMass(2)) ' charge '...
+    num2str(calibCharge(2)) ' tof peak ' num2str(tof_peaks(2))],...
+    ['mass ' num2str(calibMass(3)) ' charge '...
+    num2str(calibCharge(3)) ' tof peak ' num2str(tof_peaks(3))])
+
+tof_fits = tof_peaks;
+
+
+
+function saveCalibration(handles, calibPoints)
     points_of_interest = struct('calibPoints', calibPoints, 'filename', handles.datafile);
 
     if ~exist([handles.path '\analysis'], 'dir')
@@ -644,13 +651,6 @@ if saveCalib
     
     save(filename, 'points_of_interest', '-v7.3');
 
-end
-
-%reset the button string
-set(handles.tofHist, 'string', 'histograms');
-
-%save any values saved to handles
-guidata(hObject, handles);
 
 
 
