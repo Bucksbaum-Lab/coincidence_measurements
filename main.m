@@ -129,7 +129,7 @@ if strcmp(ext, '.txt')
 
     for ii = 1:10
         tic
-        testLoad = load([cd '\10000points.txt']);
+        testLoad = load([cd '\10000points.dat']);
         estimatedTime = estimatedTime+toc;
     end
 
