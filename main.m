@@ -124,12 +124,6 @@ else
     set(handles.err, 'string', 'you did not select a .mat or .txt file');
     error('you did not select a .mat or .txt file')
 end
-
-for ii = 1:10
-    tic
-    testLoad = load([cd '\10000points.dat']);
-    estimatedTime = estimatedTime+toc;
-end
     
 if loadSave
     saveLoadedData(handles, delayInfo, polarInfo)
@@ -153,12 +147,12 @@ estimatedTime = 0;
 
 for ii = 1:10
     tic
-    testLoad = load([cd '\10000points.txt']);
+    testLoad = load([cd '\10000points.dat']);
     estimatedTime = estimatedTime+toc;
 end
 
 fileInfo = dir(filename);
-fileInfoTest = dir([cd '\10000points.txt']);
+fileInfoTest = dir([cd '\10000points.dat']);
 estimatedTime = estimatedTime/fileInfoTest.bytes/10*fileInfo.bytes;
 clear testLoad;
 
@@ -182,7 +176,7 @@ else
 end
 
 if exist([handles.path '\polarizationInfo.txt'], 'file') == 2
-    polarInfo = loadIfExists([handles.path '\polarizationInfo.txt']);
+    polarInfo = load([handles.path '\polarizationInfo.txt']);
     x = cell(size((polarInfo(1,:))',1)+1,1);
     for nn = 1:size((polarInfo(1,:))',1)
         x(nn+1) = {num2str(polarInfo(1,nn))};
@@ -193,6 +187,18 @@ if exist([handles.path '\polarizationInfo.txt'], 'file') == 2
 else
     set(handles.polarChoice, 'string', {'all'})
     polarInfo = 0;
+end
+
+if exist([handles.path '\paramInfo.txt'], 'file') == 2
+    paramInfo = readtable([handles.path '\paramInfo.txt']);
+    x = cell(size(paramInfo(2,:),2)+1,1);
+    x(2:end) = table2cell(paramInfo(2,:));
+    x(1) = {'all'};
+
+    set(handles.paramChoice, 'string', x);
+else
+    set(handles.paramChoice, 'string', {'all'})
+    paramInfo = 0;
 end
 
 eventtags = loadIfExists([handles.path '\eventtags.txt']);
@@ -294,7 +300,7 @@ if breakUpData
                 'paramstatusRaw', handles.paramstatusRaw,...
                 'intensitystatusRaw', handles.intensitystatusRaw,...
                 'shotsStartZero', EventTagn((mm-1)*numChunks+1)-1,...
-                'delayInfo', delayInfo, 'polarInfo', polarInfo);
+                'delayInfo', delayInfo, 'polarInfo', polarInfo, 'paramInfo', paramInfo);
 
             if ~exist([handles.path '\analysis\loadedData'], 'dir')
                 mkdir([handles.path '\analysis\loadedData']);
@@ -392,6 +398,13 @@ function [handles, delayInfo, polarInfo] = loadMatData(handles, filename)
     x(1) = {'all'};
 
     set(handles.polarChoice, 'string', x);
+    
+    polarInfo = handles.paramInfo;
+    x = cell(size(polarInfo(2,:),2)+1,1);
+    x(2:end) = table2cell(polarInfo(2,:));
+    x(1) = {'all'};
+
+    set(handles.paramChoice, 'string', x);
     
     clear loaded_data
 
@@ -522,7 +535,8 @@ cond = ...
                         get(handles.polarChoice, 'value'), get(handles.delayChoice, 'value'),...
                         handles.shutterstatusRaw,   handles.intensitystatusRaw,...
                         handles.paramstatusRaw, handles.polarizationstatusRaw,...
-                        handles.delaystatusRaw, handles.polarInfo, handles.delayInfo);
+                        handles.delaystatusRaw, handles.polarInfo, handles.delayInfo,...
+                        handles.paramInfo);
 
 %apply the conditions
 tof = tof(cond, :);
@@ -572,7 +586,8 @@ function plotBrokenDataTof ()
                                 get(handles.polarChoice, 'value'), get(handles.delayChoice, 'value'),...
                                 loaded_data.shutterstatusRaw,   loaded_data.intensitystatusRaw,...
                                 loaded_data.paramstatusRaw, loaded_data.polarizationstatusRaw,...
-                                loaded_data.delaystatusRaw, loaded_data.polarInfo, loaded_data.delayInfo);
+                                loaded_data.delaystatusRaw, loaded_data.polarInfo, loaded_data.delayInfo,...
+                                loaded_data.paramInfo);
         sum(cond)
         tof = tof(cond, :);
         
@@ -712,7 +727,8 @@ cond = (tof(:, 1) > 50)&(tof(:, 2) > 50)&(tof(:, 3) > 50)&(tof(:, 4) > 50);
     
 cond = ApplyExperimentType(cond, shutterChoice, intensityChoice,...
     paramChoice, polarChoice, delayChoice, handles.shutterstatusRaw, handles.intensitystatusRaw, handles.paramstatusRaw,...
-    handles.polarizationstatusRaw, handles.delaystatusRaw, handles.polarInfo, handles.delayInfo);
+    handles.polarizationstatusRaw, handles.delaystatusRaw, handles.polarInfo, handles.delayInfo,...
+    handles.paramInfo);
 
 %load the file and then get the positions and tof
 tof = tof(cond, :);
@@ -1528,7 +1544,8 @@ for XX = 1:Textras
     
     cond = ApplyExperimentType(cond, shutterChoice, intensityChoice,...
         paramChoice, polarChoice, delayChoice, handles.shutterStatus, handles.intensityStatus, handles.paramStatus,...
-        handles.polarizationStatus, handles.delayStatus, handles.polarInfo, handles.delayInfo);
+        handles.polarizationStatus, handles.delayStatus, handles.polarInfo, handles.delayInfo,...
+        handles.paramInfo);
         
     [output] = cutandplot(mass, charge, colms, handles.momX(cond, :), handles.momY(cond, :),...
         handles.momZ(cond, :), handles.EV(cond, :), handles.ions_tof_processed(cond),...

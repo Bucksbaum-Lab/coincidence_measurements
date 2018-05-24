@@ -1,6 +1,6 @@
 function condition = ApplyExperimentType(condition, shutterChoice, intensityChoice,...
     paramChoice, polarChoice, delayChoice, shutterStatus, intensityStatus, paramStatus,...
-    polarizationStatus, delayStatus, polarInfo, delayInfo)
+    polarizationStatus, delayStatus, polarInfo, delayInfo, paramInfo)
 
 if shutterChoice == 2
     condition = condition & ~shutterStatus;
