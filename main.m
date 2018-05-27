@@ -217,7 +217,6 @@ if breakUpData
 
             %initialize the arrays for holding ion info
             [numshots,maxions] = size(rawdata);
-            eventtags = [EventTagn(((mm-1)*numChunks+1):mm*numChunks)-EventTagn((mm-1)*numChunks+1); numshots];
             maxions = (maxions-2)/3;
 
             desiredSize = rawDataStore.ReadSize;
@@ -231,6 +230,8 @@ if breakUpData
 
             end
 
+            eventtags = [EventTagn(((mm-1)*numChunks+1):mm*numChunks)-EventTagn((mm-1)*numChunks+1); numshots];
+            
             ions_x = zeros(numshots, maxions);
             ions_y = zeros(numshots, maxions);
             ions_tof = zeros(numshots, maxions);
@@ -555,11 +556,13 @@ function plotBrokenDataTof ()
     loadFile = loadFile(1:end-5);
     allfiles = dir([loadPath, '\*.mat']);
     numfiles = length(allfiles);
+    sums = [];
+    lengthes = [];
     figure()
     for nn = 1:numfiles
         load([loadPath, loadFile, num2str(nn), '.mat']);
         tof = loaded_data.ions_tof;
-        cond = (tof(:, 1) > 50)&(tof(:, 2) > 50);
+        cond = ones(size(tof,1), 1);%(tof(:, 1) > 50)&(tof(:, 2) > 50);
         cond = ...
             ApplyExperimentType(cond, get(handles.shutterChoice, 'value'), ...
                                 get(handles.intensityChoice, 'value'), get(handles.paramChoice, 'value'), ...
@@ -567,7 +570,11 @@ function plotBrokenDataTof ()
                                 loaded_data.shutterstatusRaw,   loaded_data.intensitystatusRaw,...
                                 loaded_data.paramstatusRaw, loaded_data.polarizationstatusRaw,...
                                 loaded_data.delaystatusRaw, loaded_data.polarInfo, loaded_data.delayInfo);
-        sum(cond)
+       sums = [sums, sum(cond)];
+       lengthes = [lengthes, length(loaded_data.numHitsRaw)];
+       if sum(cond) == 0
+            continue
+        end
         tof = tof(cond, :);
         
         plotCalibrationHist(tof(tof ~= 0), t0(3), tofNumBins, 'tof (ns)', false, ...
