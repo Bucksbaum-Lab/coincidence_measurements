@@ -1,5 +1,5 @@
 %%
-filename = 'G:\2018_03_09\Acetylene_5p4en10torr_266_5p6mW_1300_38mW_800_103mW_500fsDelay_DAn_DAn.txt';
+filename = 'G:\2018_05_11\take1\acetylene_1ps_6p4en10_torr_800_1300_266_DAn.txt';
 nstrings = 10000000;
 %%
 fin  = fopen(filename);

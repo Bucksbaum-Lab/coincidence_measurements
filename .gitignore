@@ -6,3 +6,6 @@
 
 #the pa0 file, which changes every time
 TopGem.pa0
+
+#matlab asv files
+*.asv

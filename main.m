@@ -353,6 +353,7 @@ else
     delaystatusRaw = nan(eventtags(length(eventtags)), 1);
     polarizationstatusRaw = nan(eventtags(length(eventtags)), 1);
     paramstatusRaw = nan(eventtags(length(eventtags)), 1);
+    intensitystatusRaw = nan(eventtags(length(eventtags)), 1);
 
     for nn = 1:length(eventtags)-1
         shutterstatusRaw((eventtags(nn) + 1):eventtags(nn + 1)) = ...
@@ -363,12 +364,16 @@ else
             repmat(polarizationstatus(nn), (eventtags(nn+1)-eventtags(nn)), 1);
         paramstatusRaw((eventtags(nn) + 1):eventtags(nn + 1)) = ...
             repmat(polarizationstatus(nn), (eventtags(nn+1)-eventtags(nn)), 1);
+        intensitystatusRaw((eventtags(nn) + 1):eventtags(nn + 1)) = ...
+            repmat(intensitystatus(nn), (eventtags(nn+1)-eventtags(nn)), 1);
+
     end
 
     handles.shutterstatusRaw = sparse(shutterstatusRaw);
     handles.delaystatusRaw = sparse(delaystatusRaw);
     handles.polarizationstatusRaw = sparse(polarizationstatusRaw);
     handles.paramstatusRaw = sparse(paramstatusRaw);
+    handles.intensitystatusRaw = intensitystatusRaw;
 
 end
 
@@ -405,7 +410,6 @@ function [handles, delayInfo, polarInfo] = loadMatData(handles, filename)
         x(nn+1) = {num2str(polarInfo(1,nn))};
     end
     x(1) = {'all'};
-    x = lower(x);
 
     set(handles.polarChoice, 'string', x);
     
@@ -413,7 +417,8 @@ function [handles, delayInfo, polarInfo] = loadMatData(handles, filename)
     x = cell(size(polarInfo(2,:),2)+1,1);
     x(2:end) = table2cell(polarInfo(2,:));
     x(1) = {'all'};
-
+    x = lower(x);
+    
     set(handles.paramChoice, 'string', x);
     
     clear loaded_data

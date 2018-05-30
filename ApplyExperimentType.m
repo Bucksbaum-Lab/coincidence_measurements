@@ -14,14 +14,10 @@ elseif intensityChoice == 3
     condition = condition & intensityStatus;
 end
 
-if paramChoice == 2
-    condition = condition & (paramStatus == 1);
-elseif paramChoice == 3
-    condition = condition & (paramStatus == 2);
-elseif paramChoice == 4
-    condition = condition & (paramStatus == 3);
-elseif paramChoice == 5
-    condition = condition & (paramStatus == 4);
+for nn = 1:width(paramInfo(2,:))
+    if paramChoice == nn+1
+        condition = condition & (paramStatus == str2double(cell2mat(table2array(paramInfo(1,nn)))));
+    end
 end
 
 for nn = 1:length(polarInfo(2,:))
