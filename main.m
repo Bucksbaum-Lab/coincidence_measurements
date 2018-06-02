@@ -307,7 +307,7 @@ if breakUpData
                 'polarizationstatusRaw', handles.polarizationstatusRaw,...
                 'paramstatusRaw', handles.paramstatusRaw,...
                 'intensitystatusRaw', handles.intensitystatusRaw,...
-                'shotsStartZero', EventTagn((mm-1)*numChunks+1)-1,...
+                'shotsStartZero', EventTagn((mm-1)*numChunks+1),...
                 'delayInfo', delayInfo, 'polarInfo', polarInfo, 'paramInfo', paramInfo);
 
             if ~exist([handles.path '\analysis\loadedData'], 'dir')
@@ -968,7 +968,7 @@ useBrokeData = get(handles.useBrokeData, 'value');
 
 %set length of ev array and theta array
 EVlength = 300;
-Thetalength = 100;
+Thetalength = 200;
 
 %get the necessary data from UI vectors
 x0 = commonParams(1);

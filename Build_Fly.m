@@ -75,7 +75,7 @@ fly = horzcat(fly,...
 
 fly = strcat(fly, '\t}\n}');
 
-fileID = fopen(fly_spectromete_filename,'w+');
+fileID = fopen([cd fly_spectromete_filename],'w+');
 
 fprintf(fileID, fly);
 
