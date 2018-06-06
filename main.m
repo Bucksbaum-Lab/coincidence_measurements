@@ -1077,11 +1077,6 @@ if includePrepared
         handles.polarizationStatus = prepared.polarizationStatus;
         handles.paramStatus = prepared.paramStatus;
         handles.delayStatus = prepared.delayStatus;
-        handles.shotsStartZero = 0;
-        handles.polarInfo = prepared.polarInfo;
-        handles.delayInfo = prepared.delayInfo;
-        handles.datafile = prepared.datafile;
-        handles.path = prepared.path;
         
     else
         
@@ -1188,7 +1183,6 @@ elseif useBrokeData
     
     [eVArray, thetaArray, tof_Sim, r_Sim] = makeSimArrays(V1, VM, ss, mass, charge, maxEV, EVlength, Thetalength);
     
-    tic
     
     for nn = 1:numfiles
  
@@ -1312,7 +1306,7 @@ end
 
 %reset the button string
 set(handles.prepare, 'string', 'prepare');
-toc
+
 %save any values saved to handles
 guidata(hObject, handles);
 
