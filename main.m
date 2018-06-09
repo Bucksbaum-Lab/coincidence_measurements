@@ -1183,6 +1183,7 @@ elseif useBrokeData
     
     [eVArray, thetaArray, tof_Sim, r_Sim] = makeSimArrays(V1, VM, ss, mass, charge, maxEV, EVlength, Thetalength);
     
+    tic    
     
     for nn = 1:numfiles
  
