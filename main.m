@@ -965,6 +965,7 @@ saveData = get(handles.savePrepare, 'value');
 includePrepared = get(handles.includePrepared, 'value');
 loadCalib = get(handles.loadCalib, 'value');
 useBrokeData = get(handles.useBrokeData, 'value');
+calibPoints = get(handles.calibPoints, 'data');
 
 %set length of ev array and theta array
 EVlength = 300;
@@ -1190,6 +1191,30 @@ elseif useBrokeData
         disp(['working on file number ' num2str(nn) ' of ' num2str(numfiles)])
         
         load([loadPath, loadFile, num2str(nn), '.mat']);
+        
+        if autoCalib
+            
+            handles.ions_x = loaded_data.ions_x;
+            handles.ions_y = loaded_data.ions_y;
+            handles.ions_tof = loaded_data.ions_tof;
+            
+            calibPoints(6,:) = [0,0,0];
+            tofHist_Callback(hObject, eventdata, handles)
+            calibPoints(5,:) = calibPoints(6,:);
+            set(handles.calibPoints, 'data', calibPoints)
+            
+            commonParams([1,2,3,6]) = 1;
+            set(handles.commonParams, 'data', commonParams)
+            tweekParams_Callback(hObject, eventdata, handles)
+            
+            ss = handles.s_fit;
+            t0 = handles.t0_fit;
+            x0 = handles.x0_fit;
+            y0 = handles.y0_fit;
+            
+            close all
+            
+        end
         
         [EV, momZ, momX, momY, hitNo, shotNo, numHits_processed, ions_tof_processed,...
             ions_x_processed, ions_y_processed, shutterStatus, intensityStatus,...
