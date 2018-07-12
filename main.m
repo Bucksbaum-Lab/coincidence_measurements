@@ -37,7 +37,7 @@ V1 <---> G <--------------> G <-----> VM
 
 % Edit the above text to modify the response to help main
 
-% Last Modified by GUIDE v2.5 08-May-2018 11:26:35
+% Last Modified by GUIDE v2.5 11-Jul-2018 17:23:16
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -966,10 +966,12 @@ includePrepared = get(handles.includePrepared, 'value');
 loadCalib = get(handles.loadCalib, 'value');
 useBrokeData = get(handles.useBrokeData, 'value');
 calibPoints = get(handles.calibPoints, 'data');
+autoCalib = get(handles.autoCalib, 'value');
 
 %set length of ev array and theta array
-EVlength = 300;
-Thetalength = 200;
+'main line 971 change EVlength and thetalength back to 300 and 200'
+EVlength = 30;
+Thetalength = 20;
 
 %get the necessary data from UI vectors
 x0 = commonParams(1);
@@ -1194,12 +1196,18 @@ elseif useBrokeData
         
         if autoCalib
             
+            mainfigurehandle = gcf;
+            
             handles.ions_x = loaded_data.ions_x;
             handles.ions_y = loaded_data.ions_y;
             handles.ions_tof = loaded_data.ions_tof;
             
             calibPoints(6,:) = [0,0,0];
+            set(handles.calibPoints, 'data', calibPoints)
+            commonParams(3) = 0;
+            set(handles.commonParams, 'data', commonParams)
             tofHist_Callback(hObject, eventdata, handles)
+            calibPoints = get(handles.calibPoints, 'data');
             calibPoints(5,:) = calibPoints(6,:);
             set(handles.calibPoints, 'data', calibPoints)
             
@@ -1207,12 +1215,16 @@ elseif useBrokeData
             set(handles.commonParams, 'data', commonParams)
             tweekParams_Callback(hObject, eventdata, handles)
             
-            ss = handles.s_fit;
-            t0 = handles.t0_fit;
-            x0 = handles.x0_fit;
-            y0 = handles.y0_fit;
+            ss = str2double(erase(erase(get(handles.s_fit, 'string'), 's = '), ' mm'));
+            t0 = str2double(erase(erase(get(handles.t0_fit, 'string'), 't0 = '), ' ns'));
+            x0 = str2double(erase(erase(get(handles.x0_fit, 'string'), 'x0 = '), ' mm'));
+            y0 = str2double(erase(erase(get(handles.y0_fit, 'string'), 'y0 = '), ' mm'));
             
+            [eVArray, thetaArray, tof_Sim, r_Sim] = makeSimArrays(V1, VM, ss, mass, charge, maxEV, EVlength, Thetalength);
+            
+            set(mainfigurehandle, 'HandleVisibility', 'off');
             close all
+            set(mainfigurehandle, 'HandleVisibility', 'on');
             
         end
         
@@ -2305,3 +2317,12 @@ function chunksStartNum_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
+
+
+% --- Executes on button press in autoCalib.
+function autoCalib_Callback(hObject, eventdata, handles)
+% hObject    handle to autoCalib (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of autoCalib
