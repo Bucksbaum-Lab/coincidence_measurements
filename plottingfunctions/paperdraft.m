@@ -7,8 +7,43 @@ intensity = 'low';
 filename = 'acetelene_1ps_6p3n10torr_0p6nd';
 folder = 'G:\2018_05_03\analysis\';
 
+filename_closed_pd= [folder...
+    filename '_closed_' intensity '_p' delay 'fs.mat'];
+load(filename_closed_pd);
 
+output_closed_pd = output;
 
+filename_open_pd= [folder...
+    filename '_open_' intensity '_p' delay 'fs.mat'];
+load(filename_open_pd);
+
+output_open_pd = output;
+
+filename_closed_nd= [folder...
+    filename '_closed_' intensity '_n' delay 'fs.mat'];
+load(filename_closed_nd);
+
+output_closed_nd = output;
+
+filename_open_nd= [folder...
+    filename '_open_' intensity '_n' delay 'fs.mat'];
+load(filename_open_nd);
+
+output_open_nd = output;
+
+clear('output')
+
+[parallel_proj_closed_pd, perpendicular_proj_closed_pd]  =... 
+    momProject(output_closed_pd.momXOut, output_closed_pd.momYOut, output_closed_pd.momZOut, output_closed_pd.mass, 1, [2, 3]);
+
+[parallel_proj_open_pd, perpendicular_proj_open_pd]  =... 
+    f.momProject(output_open_pd.momXOut, output_open_pd.momYOut, output_open_pd.momZOut, output_open_pd.mass, 1, [2, 3]);
+
+[parallel_proj_closed_nd, perpendicular_proj_closed_nd]  =... 
+    f.momProject(output_closed_nd.momXOut, output_closed_nd.momYOut, output_closed_nd.momZOut, output_closed_nd.mass, 1, [2, 3]);
+
+[parallel_proj_open_nd, perpendicular_proj_open_nd]  =... 
+    f.momProject(output_open_nd.momXOut, output_open_nd.momYOut, output_open_nd.momZOut, output_open_nd.mass, 1, [2, 3]);
 %%
 figure
 f.momHists(output_closed_pd)
