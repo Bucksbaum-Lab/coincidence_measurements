@@ -4,8 +4,8 @@ close all
 f = momentumPlotsFunctions();
 
 %put in data info
-folder = 'G:\2018_05_03\analysis\';
-filename = 'acetelene_1ps_6p3n10torr_0p6nd';
+folder = 'G:\2018_05_11\combined\';
+filename = 'acetylene_1ps_6p4en10_torr_800_1300_266';
 delay = '2000';
 intensity = 'low';
 
@@ -38,3 +38,9 @@ plotting_data = polarPlotsNormalized(plotting_data, numMom, maxMom, numAngle, sh
 compareShutterAngle(plotting_data, delayMarkers, shutterMarkers, delayTitle, shutterTitle, numAngle, intensity)
 compareShutterLowAnulus(plotting_data, delayMarkers, shutterMarkers, delayTitle, shutterTitle, numAngle, numMom, maxMom, intensity)
 compareShutterHighAnulus(plotting_data, delayMarkers, shutterMarkers, delayTitle, shutterTitle, numAngle, numMom, maxMom, intensity)
+
+compareDelayAngle(plotting_data, delayMarkers, shutterMarkers, delayTitle, shutterTitle, numAngle, intensity)
+compareDelayLowAnulus(plotting_data, delayMarkers, shutterMarkers, delayTitle, shutterTitle, numAngle, numMom, maxMom, intensity)
+compareDelayHighAnulus(plotting_data, delayMarkers, shutterMarkers, delayTitle, shutterTitle, numAngle, numMom, maxMom, intensity)
+
+%pcolor(plotting_data(1).Xpolar, plotting_data(1).Ypolar, plotting_data(1).polarDist)
