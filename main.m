@@ -739,7 +739,9 @@ end
 
 %set conditions
 cond = (tof(:, 1) > 50)&(tof(:, 2) > 50)&(tof(:, 3) > 50)&(tof(:, 4) > 50);
-    
+%'main line 742, set the previous line back on'
+%cond = (tof(:, 1) > 50);
+
 cond = ApplyExperimentType(cond, shutterChoice, intensityChoice,...
     paramChoice, polarChoice, delayChoice, handles.shutterstatusRaw, handles.intensitystatusRaw, handles.paramstatusRaw,...
     handles.polarizationstatusRaw, handles.delaystatusRaw, handles.polarInfo, handles.delayInfo,...
