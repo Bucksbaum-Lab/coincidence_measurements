@@ -13,9 +13,9 @@ EV = nan(size(tof));
 Theta = nan(size(tof));
 
 EV(isresonable_tof)    = griddata(tof_Sim, r_Sim, eVArray,...
-                                  tof(isresonable_tof), rR(isresonable_tof), 'nearest');
+                                  tof(isresonable_tof), rR(isresonable_tof), 'linear');
 Theta(isresonable_tof) = griddata(tof_Sim, r_Sim, thetaArray,...
-                                  tof(isresonable_tof), rR(isresonable_tof), 'nearest')*pi()/180;
+                                  tof(isresonable_tof), rR(isresonable_tof), 'linear')*pi()/180;
 
 %find the momentum vectors as well
 MomTotal = sqrt(2*mass*EV);

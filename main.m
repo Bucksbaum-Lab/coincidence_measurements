@@ -969,9 +969,8 @@ calibPoints = get(handles.calibPoints, 'data');
 autoCalib = get(handles.autoCalib, 'value');
 
 %set length of ev array and theta array
-'main line 971 change EVlength and thetalength back to 300 and 200'
-EVlength = 30;
-Thetalength = 20;
+EVlength = 25;
+Thetalength = 80;
 
 %get the necessary data from UI vectors
 x0 = commonParams(1);

@@ -3,9 +3,13 @@ function [eVArray, thetaArray, tof_Sim, r_Sim] =...
 
 for mm=1:length(mass)
 
-    eVArray(:,mm) = linspace(0, maxEV(mm), EVlength);
+    eVArray(:,mm) = (linspace(0, (maxEV(mm))^.5, EVlength)).^2;
+    %eVArray(:,mm) = (linspace(0, (maxEV(mm)).^2, EVlength)).^.5;
+    %eVArray(:,mm) = linspace(0, maxEV(mm), EVlength);
 
     thetaArray(:,mm) = linspace(0, 180, Thetalength);
+    %thetaArray(:,mm) = (linspace(0, sqrt(180), Thetalength)).^2;
+    %thetaArray(:,mm) = linspace(0, 180, Thetalength);
 
     %do the simulations
     evalc('Sim = Flym_Sim(charge(mm), mass(mm), eVArray(:,mm), thetaArray(:,mm), 0, ss, V1, VM);');
