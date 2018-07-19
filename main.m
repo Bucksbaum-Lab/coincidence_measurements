@@ -1187,6 +1187,11 @@ elseif useBrokeData
     
     [eVArray, thetaArray, tof_Sim, r_Sim] = makeSimArrays(V1, VM, ss, mass, charge, maxEV, EVlength, Thetalength);
     
+    ss_old = str2double(erase(erase(get(handles.s_fit, 'string'), 's = '), ' mm'));
+    t0_old = str2double(erase(erase(get(handles.t0_fit, 'string'), 't0 = '), ' ns'));
+    x0_old = str2double(erase(erase(get(handles.x0_fit, 'string'), 'x0 = '), ' mm'));
+    y0_old = str2double(erase(erase(get(handles.y0_fit, 'string'), 'y0 = '), ' mm'));
+    
     tic    
     
     for nn = 1:numfiles
@@ -1220,6 +1225,30 @@ elseif useBrokeData
             t0 = str2double(erase(erase(get(handles.t0_fit, 'string'), 't0 = '), ' ns'));
             x0 = str2double(erase(erase(get(handles.x0_fit, 'string'), 'x0 = '), ' mm'));
             y0 = str2double(erase(erase(get(handles.y0_fit, 'string'), 'y0 = '), ' mm'));
+            
+            if isnan(ss)
+                ss = ss_old;
+            else
+                ss_old = ss;
+            end
+            
+            if isnan(t0)
+                t0 = t0_old;
+            else
+                t0_old = t0;
+            end
+            
+            if isnan(x0)
+                x0 = x0_old;
+            else
+                x0_old = x0;
+            end
+            
+            if isnan(y0)
+                y0 = y0_old;
+            else
+                y0_old = y0;
+            end
             
             [eVArray, thetaArray, tof_Sim, r_Sim] = makeSimArrays(V1, VM, ss, mass, charge, maxEV, EVlength, Thetalength);
             
