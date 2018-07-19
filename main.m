@@ -649,10 +649,14 @@ colorArray = [1, .5, .5; .5, .75, .5; .75, 0, .75];
 
 for ii = 1:3
     fit_range = (calibTofMin(ii) < bins)&(bins < calibTofMax(ii));
-    fit_result = fit(bins(fit_range).', values(fit_range).', 'gauss1');
-    tof_peaks(ii) = fit_result.b1;
-    p = plot(bins(fit_range), fit_result(bins(fit_range)));
-    set(p, 'color', colorArray(ii, :))
+    try
+        fit_result = fit(bins(fit_range).', values(fit_range).', 'gauss1');
+        tof_peaks(ii) = fit_result.b1;
+        p = plot(bins(fit_range), fit_result(bins(fit_range)));
+        set(p, 'color', colorArray(ii, :))
+    catch
+        tof_peaks(ii) = NaN;
+    end
 end
 
 legend('data', ['mass ' num2str(calibMass(1)) ' charge '...
@@ -1219,36 +1223,48 @@ elseif useBrokeData
             
             commonParams([1,2,3,6]) = 1;
             set(handles.commonParams, 'data', commonParams)
-            tweekParams_Callback(hObject, eventdata, handles)
             
-            ss = str2double(erase(erase(get(handles.s_fit, 'string'), 's = '), ' mm'));
-            t0 = str2double(erase(erase(get(handles.t0_fit, 'string'), 't0 = '), ' ns'));
-            x0 = str2double(erase(erase(get(handles.x0_fit, 'string'), 'x0 = '), ' mm'));
-            y0 = str2double(erase(erase(get(handles.y0_fit, 'string'), 'y0 = '), ' mm'));
-            
-            if isnan(ss)
-                ss = ss_old;
-            else
+            try
+                tweekParams_Callback(hObject, eventdata, handles)
+
+                ss = str2double(erase(erase(get(handles.s_fit, 'string'), 's = '), ' mm'));
+                t0 = str2double(erase(erase(get(handles.t0_fit, 'string'), 't0 = '), ' ns'));
+                x0 = str2double(erase(erase(get(handles.x0_fit, 'string'), 'x0 = '), ' mm'));
+                y0 = str2double(erase(erase(get(handles.y0_fit, 'string'), 'y0 = '), ' mm'));
+                
                 ss_old = ss;
-            end
-            
-            if isnan(t0)
-                t0 = t0_old;
-            else
                 t0_old = t0;
-            end
-            
-            if isnan(x0)
-                x0 = x0_old;
-            else
+                
+                if isnan(x0)
+                    x0 = x0_old;
+                end
+                
+                if isnan(y0)
+                    y0 = y0_old;
+                end
+                
                 x0_old = x0;
+                y0_old = y0;
+            
+            catch
+                
+                ss = ss_old;
+                t0 = t0_old;
+                
+                if isnan(x0)
+                    x0 = x0_old;
+                end
+                
+                if isnan(y0)
+                    y0 = y0_old;
+                end
+                
+                x0_old = x0;
+                y0_old = y0;
+
             end
             
-            if isnan(y0)
-                y0 = y0_old;
-            else
-                y0_old = y0;
-            end
+
             
             [eVArray, thetaArray, tof_Sim, r_Sim] = makeSimArrays(V1, VM, ss, mass, charge, maxEV, EVlength, Thetalength);
             
@@ -1766,10 +1782,6 @@ function calibPoints_CellEditCallback(hObject, eventdata, handles)
 %	Error: error string when failed to convert EditData to appropriate value for Data
 % handles    structure with handles and user data (see GUIDATA)
 
-%make sure 'NaN' is not displayed
-params = get(handles.calibPoints, 'data');
-params(isnan(params)) = 0;
-set(handles.calibPoints, 'data', params);
 
 function tofNumBins_Callback(hObject, eventdata, handles)
 % hObject    handle to tofNumBins (see GCBO)
