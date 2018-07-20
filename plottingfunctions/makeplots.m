@@ -31,16 +31,22 @@ plotting_data = anglesAndProjections(plotting_data);
 numMom = 10;
 maxMom = 8;
 numAngle = 5;
-
+%%
 plotting_data = polarPlots(plotting_data, numMom, maxMom, numAngle, shutterTitle, delayTitle, intensity);
 plotting_data = polarPlotsNormalized(plotting_data, numMom, maxMom, numAngle, shutterTitle, delayTitle, intensity);
-
+%%
 compareShutterAngle(plotting_data, delayMarkers, shutterMarkers, delayTitle, shutterTitle, numAngle, intensity)
 compareShutterLowAnulus(plotting_data, delayMarkers, shutterMarkers, delayTitle, shutterTitle, numAngle, numMom, maxMom, intensity)
 compareShutterHighAnulus(plotting_data, delayMarkers, shutterMarkers, delayTitle, shutterTitle, numAngle, numMom, maxMom, intensity)
-
+%%
 compareDelayAngle(plotting_data, delayMarkers, shutterMarkers, delayTitle, shutterTitle, numAngle, intensity)
 compareDelayLowAnulus(plotting_data, delayMarkers, shutterMarkers, delayTitle, shutterTitle, numAngle, numMom, maxMom, intensity)
 compareDelayHighAnulus(plotting_data, delayMarkers, shutterMarkers, delayTitle, shutterTitle, numAngle, numMom, maxMom, intensity)
-
+%%
 %pcolor(plotting_data(1).Xpolar, plotting_data(1).Ypolar, plotting_data(1).polarDist)
+%%
+for ii = 1:4
+    [plotting_data(ii).clusters, plotting_data(ii).centroid] = kmeans([plotting_data(ii).parallel_proj,plotting_data(ii).perpendicular_proj],4);
+    figure();gscatter(plotting_data(ii).parallel_proj,plotting_data(ii).perpendicular_proj,plotting_data(ii).clusters)
+    title([plotting_data(ii).shutter, plotting_data(ii).delay])
+end
