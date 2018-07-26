@@ -21,6 +21,13 @@ for nn = 1:length(shutterMarkers)
         output.momZOut =...
             getCOMmomentum(output.mass(1), output.momZOut(cond,1), output.mass(2), output.momZOut(cond,2), output.mass(3), output.momZOut(cond,3));
 
+        output.hitNoOut = output.hitNoOut(cond,:);
+        output.shotNoOut = output.shotNoOut(cond,:);
+        output.numHitsOut = output.numHitsOut(cond,:);
+        output.tofOut = output.tofOut(cond,:);
+        output.partEnergyOut = output.partEnergyOut(cond,:);
+        output.KER = output.KER(cond,:);
+        
         plotting_data(ll).output = output;
         plotting_data(ll).shutter = shutterMarkers(nn);
         plotting_data(ll).delay = delayMarkers(mm);
