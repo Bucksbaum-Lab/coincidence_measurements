@@ -1,0 +1,22 @@
+; Top geometry file to create the PA
+pa_define(270,220,220,P,None,E,1.0)
+locate(0,110,110)
+{
+	locate(24,0,0,1,0,0)
+		{
+		locate(-19.0){e(1){include(First)}}
+		
+		locate(-3.0){e(2){include(Second)}}
+		
+		locate(13.0){e(3){include(Third)}}
+		
+		locate(29.0){e(4){include(Fourth)}}
+		}
+
+	locate( 0.0){e(6){include(FlightTube)}}
+
+	locate(268.0){e(5){include(MCP)}}
+
+	locate(248.0){e(6){include(Mesh)}}
+
+}

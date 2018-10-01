@@ -1,4 +1,4 @@
-function [Sim] = Flym_Sim(charge, mass, eV, theta, phi, ss, V1, VM)
+function [Sim] = Flym_Sim2(charge, mass, eV, theta, phi, ss, V1, VM)
 
 %phi(eV < 0) = phi(eV < 0) + 180;
 fly_spectromete_filename = ['.\flym\fly_Spectrometer'...

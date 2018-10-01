@@ -1,0 +1,12 @@
+; Second.gem
+fill {
+	within {
+		box3d(0,-51.0,-51.0, 1.0,51.0,51.0)
+	}
+	notin {
+		locate(0,0,0,1.0,-90,0,0) {
+			cylinder(0,0,0,12.0,12.0, 1.0)
+		}
+	}
+}
+; end of Floater.gem
