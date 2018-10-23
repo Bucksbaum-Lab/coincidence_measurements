@@ -1,5 +1,5 @@
-histx = linspace(0,18,19);
-
+histx = linspace(0,18,18*2+1);
+%{
 figure()
 [hist266,X266] = hist(output_266_14.KER(output_266_14.KER<18),histx);
 [hist1300,X1300] = hist(output_1300_14.KER(output_1300_14.KER<18),histx);
@@ -26,18 +26,22 @@ figure();plot(Vin_266, VinKE_266, '-o', Vin_800, VinKE_800, '-o', Vin_1300, VinK
 xlabel('peaks KER (eV)')
 legend('266, peak1', '266, peak2', '800, peak1 ', '800, peak2', '1300, peak1', '1300, peak2')
 title('CH2/C bootstrap')
-
+%}
 figure()
 [hist266,X266] = hist(output_266_1.KER(output_266_1.KER<18),histx);
 [hist1300,X1300] = hist(output_1300_1.KER(output_1300_1.KER<18),histx);
 [hist800,X800] = hist(output_800_1.KER(output_800_1.KER<18),histx);
-plot(X266,hist266/sum(hist266),'-o',X800,hist800/sum(hist800),'-o',X1300,hist1300/sum(hist1300), '-o')
+errorbar(X266,hist266/sum(hist266),sqrt(hist266)/sum(hist266),sqrt(hist266)/sum(hist266))
+hold on;
+errorbar(X800,hist800/sum(hist800),sqrt(hist800)/sum(hist800),sqrt(hist800)/sum(hist800))
+errorbar(X1300,hist1300/sum(hist1300),sqrt(hist1300)/sum(hist1300),sqrt(hist1300)/sum(hist1300))
+hold off;
 xlabel('KER (eV)')
 legend(['266, mean eV ' num2str(mean(output_266_1.KER(output_266_1.KER<18)))],...
     ['800, mean eV ' num2str(mean(output_800_1.KER(output_800_1.KER<18)))],...
     ['1300, mean eV ' num2str(mean(output_1300_1.KER(output_1300_1.KER<18)))])
 title('C2H/H')
-
+%{
 [DPKE_1300,DP_1300] = hist(bootstrp(1000,'mean', output_1300_1.KER(output_1300_1.KER<18)));
 [DPKE_800,DP_800] = hist(bootstrp(1000,'mean', output_800_1.KER(output_800_1.KER<18)));
 [DPKE_266,DP_266] = hist(bootstrp(1000,'mean', output_266_1.KER(output_266_1.KER<18)));
@@ -53,7 +57,8 @@ figure();plot(DP_266, DPKE_266, '-o', DP_800, DPKE_800, '-o', DP_1300, DPKE_1300
 xlabel('peaks KER (eV)')
 legend('266, peak1', '266, peak2', '800, peak1 ', '800, peak2', '1300, peak1', '1300, peak2')
 title('C2H/H bootstrap')
-
+%}
+%{
 figure()
 [hist266,X266] = hist(output_266_13.KER(output_266_13.KER<18),histx);
 [hist1300,X1300] = hist(output_1300_13.KER(output_1300_13.KER<18),histx);
@@ -80,7 +85,7 @@ figure();plot(Ac_266, AcKE_266, '-o', Ac_800, AcKE_800, '-o', Ac_1300, AcKE_1300
 xlabel('peaks KER (eV)')
 legend('266, peak1', '266, peak2', '800, peak1 ', '800, peak2', '1300, peak1', '1300, peak2')
 title('CH/CH bootstrap')
-
+%}
 %{
 figure();plot(Vin_266, VinKE_266, '-o', DP_266, DPKE_266, '-o', Ac_266, AcKE_266, '-o')
 xlabel('mean KER (eV)')
