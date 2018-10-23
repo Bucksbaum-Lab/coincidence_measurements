@@ -33,13 +33,17 @@ figure()
 [hist266,X266] = hist(output_266_1.KER(output_266_1.KER<18),histx);
 [hist1300,X1300] = hist(output_1300_1.KER(output_1300_1.KER<18),histx);
 [hist800,X800] = hist(output_800_1.KER(output_800_1.KER<18),histx);
-plot(X266,hist266/sum(hist266),'-o',X800,hist800/sum(hist800),'-o',X1300,hist1300/sum(hist1300), '-o')
+errorbar(X266,hist266/sum(hist266),sqrt(hist266)/sum(hist266),sqrt(hist266)/sum(hist266))
+hold on;
+errorbar(X800,hist800/sum(hist800),sqrt(hist800)/sum(hist800),sqrt(hist800)/sum(hist800))
+errorbar(X1300,hist1300/sum(hist1300),sqrt(hist1300)/sum(hist1300),sqrt(hist1300)/sum(hist1300))
+hold off;
 xlabel('KER (eV)')
 legend(['266, mean eV ' num2str(mean(output_266_1.KER(output_266_1.KER<18)))],...
     ['800, mean eV ' num2str(mean(output_800_1.KER(output_800_1.KER<18)))],...
     ['1300, mean eV ' num2str(mean(output_1300_1.KER(output_1300_1.KER<18)))])
 title('C2H/H')
-
+%{
 [DPKE_1300,DP_1300] = hist(bootstrp(1000,'mean', output_1300_1.KER(output_1300_1.KER<18)));
 [DPKE_800,DP_800] = hist(bootstrp(1000,'mean', output_800_1.KER(output_800_1.KER<18)));
 [DPKE_266,DP_266] = hist(bootstrp(1000,'mean', output_266_1.KER(output_266_1.KER<18)));
