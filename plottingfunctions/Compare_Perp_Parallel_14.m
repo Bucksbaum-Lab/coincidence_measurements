@@ -1,8 +1,8 @@
-histx = linspace(0,18,18*1+1);
+histx = linspace(0,18,18*.5+1);
 
-CH2eV = 15;
-CeV = 15;
-mom = 10;
+CH2eV = 5;
+CeV = 5;
+mom = 7;
 totKER = 18;
 
 coinNum = linspace(1,size(output_266_14.numHitsOut,1),size(output_266_14.numHitsOut,1));
@@ -55,140 +55,118 @@ cond_800_14_par = abs(sum(output_800_14_par.momXOut,2))<mom&...
 %&...
 %    coinNum<max(coinNum)/2;
 
-KER_266_14 = getCOMKER2(output_266_14.momXOut(cond_266,1),output_266_14.momXOut(cond_266,2),...
-    output_266_14.momYOut(cond_266,1),output_266_14.momYOut(cond_266,2),...
-    output_266_14.momZOut(cond_266,1),output_266_14.momZOut(cond_266,2),12,14);
-
-KER_1300_perp_14 = getCOMKER2(output_1300_14_perp.momXOut(cond_1300_14_perp,1),output_1300_14_perp.momXOut(cond_1300_14_perp,2),...
-    output_1300_14_perp.momYOut(cond_1300_14_perp,1),output_1300_14_perp.momYOut(cond_1300_14_perp,2),...
-    output_1300_14_perp.momZOut(cond_1300_14_perp,1),output_1300_14_perp.momZOut(cond_1300_14_perp,2),12,14);
-
-KER_1300_par_14 = getCOMKER2(output_1300_14_par.momXOut(cond_1300_14_par,1),output_1300_14_par.momXOut(cond_1300_14_par,2),...
-    output_1300_14_par.momYOut(cond_1300_14_par,1),output_1300_14_par.momYOut(cond_1300_14_par,2),...
-    output_1300_14_par.momZOut(cond_1300_14_par,1),output_1300_14_par.momZOut(cond_1300_14_par,2),12,14);
-
-KER_800_perp_14 = getCOMKER2(output_800_14_perp.momXOut(cond_800_14_perp,1),output_800_14_perp.momXOut(cond_800_14_perp,2),...
-    output_800_14_perp.momYOut(cond_800_14_perp,1),output_800_14_perp.momYOut(cond_800_14_perp,2),...
-    output_800_14_perp.momZOut(cond_800_14_perp,1),output_800_14_perp.momZOut(cond_800_14_perp,2),12,14);
-
-KER_800_par_14 = getCOMKER2(output_800_14_par.momXOut(cond_800_14_par,1),output_800_14_par.momXOut(cond_800_14_par,2),...
-    output_800_14_par.momYOut(cond_800_14_par,1),output_800_14_par.momYOut(cond_800_14_par,2),...
-    output_800_14_par.momZOut(cond_800_14_par,1),output_800_14_par.momZOut(cond_800_14_par,2),12,14);
+KER_266_14 = output_266_14.KER(cond_266);
+KER_1300_perp_1 = output_1300_14_perp.KER(cond_1300_14_perp);
+KER_800_perp_1 = output_800_14_perp.KER(cond_800_14_perp);
+KER_800_par_1 = output_800_14_par.KER(cond_800_14_par);
+KER_1300_par_1 = output_1300_14_par.KER(cond_1300_14_par);
 
 [hist266,X266] = hist(KER_266_14,histx);
-[hist1300_perp,X1300] = hist(KER_1300_perp_14,histx);
-[hist800_perp,X800] = hist(KER_800_perp_14,histx);
-[hist1300_par,X1300] = hist(KER_1300_par_14,histx);
-[hist800_par,X800] = hist(KER_800_par_14,histx);
-figure()
-errorbar(X266,hist266/2,sqrt(hist266)/2,sqrt(hist266)/2)
-hold on;
-
-norm_800_perp = hist800_perp/sum(hist800_perp);
-error_800_perp = sqrt(hist800_perp)/sum(hist800_perp);
-norm_800_par = hist800_par/sum(hist800_par);
-error_800_par = sqrt(hist800_par)/sum(hist800_par);
-
-errorbar(X800,hist800_perp,sqrt(hist800_perp),sqrt(hist800_perp))
-errorbar(X800,hist800_par,sqrt(hist800_par),sqrt(hist800_par))
-xlabel('KER (eV)')
-legend('266','800 perp','800 par')
-title('C2H/H 800')
+[hist1300_perp,X1300] = hist(KER_1300_perp_1,histx);
+[hist800_perp,X800] = hist(KER_800_perp_1,histx);
+[hist1300_par,X1300] = hist(KER_1300_par_1,histx);
+[hist800_par,X800] = hist(KER_800_par_1,histx);
 
 error_266 = sqrt(hist266)/2;
 
-figure()
-errorbar(X266,hist266/2,sqrt(hist266)/2,sqrt(hist266)/2)
+error_800_perp = sqrt(hist800_perp);
+error_800_par = sqrt(hist800_par);
+
+error_1300_perp = sqrt(hist1300_perp);
+error_1300_par = sqrt(hist1300_par);
+%{
+figure('units', 'inches', 'position', [.5 .5 7.5 6.5])
+errorbar(X266,hist266/2,error_266,error_266,'linewidth', 3, 'color',[0.4660, 0.6740, 0.1880])
 hold on;
 
-norm_1300_perp = hist1300_perp/sum(hist1300_perp);
-error_1300_perp = sqrt(hist1300_perp)/sum(hist1300_perp);
-norm_1300_par = hist1300_par/sum(hist1300_par);
-error_1300_par = sqrt(hist1300_par)/sum(hist1300_par);
-
-errorbar(X1300,hist1300_perp,sqrt(hist1300_perp),sqrt(hist1300_perp))
-errorbar(X1300,hist1300_par,sqrt(hist1300_par),sqrt(hist1300_par))
+errorbar(X800,hist800_perp,error_800_perp,error_800_perp,'linewidth', 3, 'color', [0,112,184]/255)
+errorbar(X800,hist800_par,error_800_par,error_800_par,'linewidth', 3, 'color', 'k')
 xlabel('KER (eV)')
+ylabel('counts')
+legend('266','800 perp','800 par')
+title('Isomerization, 800 nm Control')
+set(gca, 'fontsize', 18)
+xlim([0,18])
+
+figure('units', 'inches', 'position', [.5 .5 7.5 6.5])
+errorbar(X266,hist266/2,error_266,error_266,'linewidth', 3, 'color',[0.4660, 0.6740, 0.1880])
+hold on;
+
+errorbar(X1300,hist1300_perp,error_1300_perp,error_1300_perp,'linewidth', 3, 'color', [0,112,184]/255)
+errorbar(X1300,hist1300_par,error_1300_par,error_1300_par,'linewidth', 3, 'color', 'k')
+xlabel('KER (eV)')
+ylabel('counts')
 legend('266','1300 perp','1300 par')
-title('C2H/H 1300')
+title('Isomerization, 1300 nm Control')
+set(gca, 'fontsize', 18)
+xlim([0,18])
 
 %%
-
-figure()
-errorbar(X800,(hist800_perp-hist266/2),sqrt(error_800_perp.^2+error_266.^2),sqrt(error_800_perp.^2+error_266.^2))
+figure('units', 'inches', 'position', [.5 .5 7.5 6.5])
+errorbar(X800,(hist800_perp-hist266/2),sqrt(error_800_perp.^2+error_266.^2),sqrt(error_800_perp.^2+error_266.^2),'linewidth', 3', 'color', [0,112,184]/255)
 hold on
-errorbar(X800,(hist800_par-hist266/2),sqrt(error_800_par.^2+error_266.^2),sqrt(error_800_par.^2+error_266.^2))
-legend('800 perp', '800 par')
-title('C2H/H 800')
-xlabel('eV')
-ylabel('change in counts from 266')
+errorbar(X800,(hist800_par-hist266/2),sqrt(error_800_par.^2+error_266.^2),sqrt(error_800_par.^2+error_266.^2),'linewidth', 3, 'color', 'k')
+xlim([0,18])
+legend('perp', 'par')
+title('Isomerization, 800 nm Control')
+xlabel('KER (eV)')
+ylabel('\Delta counts')
+set(gca, 'fontsize', 18)
 
 
-figure()
-errorbar(X1300,(hist1300_perp-hist266/2),sqrt(error_1300_perp.^2+error_266.^2),sqrt(error_1300_perp.^2+error_266.^2))
+figure('units', 'inches', 'position', [.5 .5 7.5 6.5])
+errorbar(X1300,(hist1300_perp-hist266/2),sqrt(error_1300_perp.^2+error_266.^2),sqrt(error_1300_perp.^2+error_266.^2),'linewidth', 3', 'color', [0,112,184]/255)
 hold on
-errorbar(X1300,(hist1300_par-hist266/2),sqrt(error_1300_par.^2+error_266.^2),sqrt(error_1300_par.^2+error_266.^2))
-legend('1300 perp', '1300 par')
-title('C2H/H 1300')
-xlabel('eV')
-ylabel('change in counts from 266')
+errorbar(X1300,(hist1300_par-hist266/2),sqrt(error_1300_par.^2+error_266.^2),sqrt(error_1300_par.^2+error_266.^2),'linewidth', 3, 'color', 'k')
+xlim([0,18])
+legend('perp', 'par')
+title('Isomerization, 1300 nm Control')
+xlabel('KER (eV)')
+ylabel('\Delta counts')
+set(gca, 'fontsize', 18)
+%}
 
-%%
-BondMomX = output_266_14.momXOut(cond_266,1)-output_266_14.momXOut(cond_266,2);
-BondMomY = output_266_14.momYOut(cond_266,1)-output_266_14.momYOut(cond_266,2);
-BondMomZ = output_266_14.momZOut(cond_266,1)-output_266_14.momZOut(cond_266,2);
+figure('units', 'inches', 'position', [.5 .5 7.5 5.5])
+subplot(2,1,1)
+errorbar(X1300,hist1300_par,error_1300_par,error_1300_par,'-*','linewidth', 2, 'color', [0,112,184]/255)
+hold on
+errorbar(X1300,hist1300_perp,error_1300_perp,error_1300_perp,'linewidth', 2, 'color', 'k')
+errorbar(X266,hist266/2,error_266,error_266,'--*','linewidth', 2, 'color', [0.4660, 0.6740, 0.1880])
+hold off
+xlim([0,18])
+legend('par','perp', 'off')
+title('1300 nm control')
+xlabel('KER (eV)')
+ylabel('counts')
+subplot(2,1,2)
+errorbar(X800,hist800_perp,error_800_perp,error_800_perp,'-*','linewidth', 2, 'color', [0,112,184]/255)
+hold on
+errorbar(X800,hist800_par,error_800_par,error_800_par,'linewidth', 2, 'color', 'k')
+errorbar(X266,hist266/2,error_266,error_266,'--*','linewidth', 2, 'color', [0.4660, 0.6740, 0.1880])
+xlim([0,18])
+legend('par', 'perp', 'off')
+title('800 nm control')
+xlabel('KER (eV)')
+ylabel('counts')
 
-KER = output_266_14.KER(cond_266);
-
-tt = '266';
-sp = 'isomerized';
-
-KERAnglePlot
-
-
-BondMomX = output_800_14_perp.momXOut(cond_800_14_perp,1)-output_800_14_perp.momXOut(cond_800_14_perp,2);
-BondMomY = output_800_14_perp.momYOut(cond_800_14_perp,1)-output_800_14_perp.momYOut(cond_800_14_perp,2);
-BondMomZ = output_800_14_perp.momZOut(cond_800_14_perp,1)-output_800_14_perp.momZOut(cond_800_14_perp,2);
-
-KER = output_800_14_perp.KER(cond_800_14_perp);
-
-tt = '800 perp';
-sp = 'isomerized';
-
-KERAnglePlot
-
-
-BondMomX = output_1300_14_perp.momXOut(cond_1300_14_perp,1)-output_1300_14_perp.momXOut(cond_1300_14_perp,2);
-BondMomY = output_1300_14_perp.momYOut(cond_1300_14_perp,1)-output_1300_14_perp.momYOut(cond_1300_14_perp,2);
-BondMomZ = output_1300_14_perp.momZOut(cond_1300_14_perp,1)-output_1300_14_perp.momZOut(cond_1300_14_perp,2);
-
-KER = output_1300_14_perp.KER(cond_1300_14_perp);
-
-tt = '1300 perp';
-sp = 'isomerized';
-
-KERAnglePlot
-
-
-BondMomX = output_800_14_par.momXOut(cond_800_14_par,1)-output_800_14_par.momXOut(cond_800_14_par,2);
-BondMomY = output_800_14_par.momYOut(cond_800_14_par,1)-output_800_14_par.momYOut(cond_800_14_par,2);
-BondMomZ = output_800_14_par.momZOut(cond_800_14_par,1)-output_800_14_par.momZOut(cond_800_14_par,2);
-
-KER = output_800_14_par.KER(cond_800_14_par);
-
-tt = '800 par';
-sp = 'isomerized';
-
-KERAnglePlot
-
-
-BondMomX = output_1300_14_par.momXOut(cond_1300_14_par,1)-output_1300_14_par.momXOut(cond_1300_14_par,2);
-BondMomY = output_1300_14_par.momYOut(cond_1300_14_par,1)-output_1300_14_par.momYOut(cond_1300_14_par,2);
-BondMomZ = output_1300_14_par.momZOut(cond_1300_14_par,1)-output_1300_14_par.momZOut(cond_1300_14_par,2);
-
-KER = output_1300_14_par.KER(cond_1300_14_par);
-
-tt = '1300 par';
-sp = 'isomerized';
-
-KERAnglePlot
+%[.5 .5 4.5 3.5]
+figure('units', 'inches', 'position', [.5 .5 7.5 5.5])
+subplot(2,1,1)
+errorbar(X1300,(hist1300_par-hist266/2),sqrt(error_1300_par.^2+error_266.^2),sqrt(error_1300_par.^2+error_266.^2),'-*','linewidth', 2, 'color', [0,112,184]/255)
+hold on
+errorbar(X1300,(hist1300_perp-hist266/2),sqrt(error_1300_perp.^2+error_266.^2),sqrt(error_1300_perp.^2+error_266.^2),'linewidth', 2, 'color', 'k')
+hold off
+xlim([0,18])
+legend('par', 'perp')
+title('1300 nm control')
+xlabel('KER (eV)')
+ylabel('counts')
+subplot(2,1,2)
+errorbar(X800,(hist800_par-hist266/2),sqrt(error_800_par.^2+error_266.^2),sqrt(error_800_par.^2+error_266.^2),'-*','linewidth', 2, 'color', [0,112,184]/255)
+hold on
+errorbar(X800,(hist800_perp-hist266/2),sqrt(error_800_perp.^2+error_266.^2),sqrt(error_800_perp.^2+error_266.^2),'linewidth', 2, 'color', 'k')
+xlim([0,18])
+legend('par', 'perp')
+title('800 nm control')
+xlabel('KER (eV)')
+ylabel('\Delta counts')
